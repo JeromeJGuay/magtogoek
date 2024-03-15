@@ -42,7 +42,7 @@ Usage
   >>>  bodc_var = gen_to_bodc_map[generic_variable]
 
   >>>  # Plotting the data.
-  >>>  iqcp = InteractiveQualityControlPlot(dataset=ds, variable=bodc_var)
+  >>>  iqcp = QcPlot(dataset=ds, variable=bodc_var)
   >>>  iqcp.run()
 
   >>>  # Datast needsto be loaded (not open) to overwrite the current file.
@@ -209,7 +209,7 @@ def zoom_control(axe, base_scale = 1.2, max_zoom_in = 10):
     # attach the call back
     fig.canvas.mpl_connect('scroll_event',zoom_func)
 
-class InteractiveQualityControlPlot:
+class QcPlot:
     """
     Data Colors
     -----------
@@ -228,9 +228,11 @@ class InteractiveQualityControlPlot:
      <enter>: Exit the interactive plot.
 
     """
-    def __init__(self, dataset: xr.Dataset, variable: str):
+    def __init__(self, dataset: xr.Dataset, variable: str, gen_name = True):
         self.dataset = dataset
         self.selected_variable = variable
+        self.gen_name = gen_name
+
         self.selected_qc_variable = self.dataset[self.selected_variable].attrs["ancillary_variables"]
 
         self.fig, self.axes = None, None
@@ -264,7 +266,11 @@ class InteractiveQualityControlPlot:
                                                alpha=.75)
         self.ax0.get_xlim()
         self.ax0.get_ylim()
-        ylabel = f"{self.selected_variable} [{self.dataset[self.selected_variable].attrs['units']}]"
+        if self.gen_name is True:
+            var_name = self.dataset[self.selected_variable].attrs['generic_name']
+        else:
+            var_name = self.selected_variable
+        ylabel = f"{var_name} [{self.dataset[self.selected_variable].attrs['units']}]"
         self.ax0.set_ylabel(ylabel)
 
     def display_qc_variable(self):
@@ -349,7 +355,7 @@ if __name__ == '__main__':
     save_path = '/home/jeromejguay/ImlSpace/Data/pmza_2023/IML-4/iml4_meteoce_2023_QC.nc'
 
     # generic_var = 'atm_temperature'
-    generic_variable = 'atm_temperature'
+    generic_variable = 'ph'
 
     # loading dataset
     ds=xr.open_dataset(path)
@@ -359,8 +365,12 @@ if __name__ == '__main__':
     bodc_var = gen_to_bodc_map[generic_variable]
 
     # Plotting the data.
-    iqcp = InteractiveQualityControlPlot(dataset=ds, variable=bodc_var)
-    iqcp.run()
+    plt.ioff()
+    for var in ds.variables:
+        if "_QC" not in var and 'ancillary_variables' in ds[var].attrs:
+            QcPlot(dataset=ds, variable=var).run()
+
+
 
     # Datast needsto be loaded (not open) to overwrite the current file.
     # if path == save_path:

@@ -269,8 +269,8 @@ def compute_speed_and_course(dataset: xr.Dataset, window: int = None):
 
     nav_dataset = nav_dataset.interp(time=dataset.time)
 
-    dataset['course'] = np.round(nav_dataset['course'], 2)
-    dataset['speed'] = np.round(nav_dataset['speed'], 2)
+    dataset['course'] = np.round(nav_dataset['course'], 3) # mm precision
+    dataset['speed'] = np.round(nav_dataset['speed'], 3) # mm precision
 
 
 def compute_uv_ship(dataset: xr.Dataset):
@@ -297,7 +297,7 @@ def _compute_speed_and_course(time: tp.Union[list, np.ndarray],
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
 
-        speed = distances / time_delta.astype("float64")  # meter per seconds
+        speed = np.round(distances / time_delta.astype("float64"), 3)  # meter per seconds  (mm precision)
 
     centered_time = time[:-1] + time_delta / 2
 

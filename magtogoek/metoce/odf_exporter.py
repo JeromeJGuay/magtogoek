@@ -5,7 +5,7 @@ Date: July 25 2022
 Made by: jeromejguay
 
 
-METEOCE BODC:
+METOCE BODC:
         Time                                                 : SYTM_01 : SDN:P01::ELTMEP01
         Longitude (East +ve)                                 : LOND_01 : SDN:P01::ALONZZ01
         Latitude (North +ve)                                 : LATD_01 : SDN:P01::ALATZZ01
@@ -61,23 +61,14 @@ PARAMETERS = (
     'ph',
     'chlorophyll',
     'par',
-    'co2_air',
-    'co2_water',
+    'pco2_air',
+    'pco2_water',
     'wave_mean_height',
     'wave_maximal_height',
-    'wave_period',
-
-    #Not in ODF meteoce file but could be added
-    # 'pitch', ANC
-    # 'roll_',ANC
-    # 'heading', ANC
-    # "u", VEL
-    # "v", VEL
-    # "w", VEL
-    # "e" VEL
+    'wave_period'
 )
 
-QC_PARAMETERS = ( # FIXME check this.
+QC_PARAMETERS = ( # Note: commented variables have no quality control. (March 2024)
     # 'wind_speed',
     # 'wind_direction',
     # 'wind_gust',
@@ -92,8 +83,8 @@ QC_PARAMETERS = ( # FIXME check this.
     'ph',
     # 'chlorophyll',
     # 'par',
-    # 'co2_air',
-    # 'co2_water',
+    # 'pco2_air',
+    # 'pco2_water',
     # 'wave_mean_height',
     # 'wave_maximal_height',
     # 'wave_period',
@@ -102,7 +93,7 @@ QC_PARAMETERS = ( # FIXME check this.
 PARAMETERS_METADATA_PATH = CONFIGURATION_PATH.joinpath("odf_parameters_metadata.json")
 PARAMETERS_METADATA = json2dict(PARAMETERS_METADATA_PATH)
 
-EVENT_QUALIFIER2 = 'METEOCE'
+EVENT_QUALIFIER2 = 'METOCE'
 
 
 def make_odf(

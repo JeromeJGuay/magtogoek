@@ -500,7 +500,6 @@ def _load_adcp_data(pconfig: ProcessConfig) -> xr.Dataset:
     """
     if netcdf_raw_exist(pconfig) and pconfig.from_raw is not True:
         dataset = load_netcdf_raw(pconfig)
-        l.log(f"Data loaded from {pconfig.netcdf_raw_path}.")
     else:
         dataset = load_adcp_binary(
             filenames=pconfig.input_files,
@@ -748,10 +747,6 @@ def _regrid_dataset(dataset: xr.Dataset, pconfig: ProcessConfig) -> xr.Dataset:
 
 
 def _write_odf(dataset: xr.Dataset, pconfig: ProcessConfig):
-    if pconfig.odf_data is None:
-        pconfig.odf_data = 'both'
-    odf_data = {'both': ['VEL', 'ANC'], 'vel': ['VEL'], 'anc': ['ANC']}[pconfig.odf_data]
-
     if pconfig.platform_metadata is None:
         pconfig.platform_metadata = PlatformMetadata()
         pconfig.platform_metadata.platform.platform_type = pconfig.platform_type
@@ -760,7 +755,7 @@ def _write_odf(dataset: xr.Dataset, pconfig: ProcessConfig):
         pconfig.adcp_id = "adcp_01"
         pconfig.platform_metadata.add_instrument(instrument_id=pconfig.adcp_id, instrument_meta={"sensor_type": 'adcp'})
 
-    for qualifier in odf_data:
+    for qualifier in ('VEL', 'ANC'):
         _ = make_odf(
             dataset=dataset,
             platform_metadata=pconfig.platform_metadata,
@@ -768,7 +763,7 @@ def _write_odf(dataset: xr.Dataset, pconfig: ProcessConfig):
             global_attributes=pconfig.global_attributes,
             p01_codes_map=pconfig.p01_codes_map,
             use_bodc_name=pconfig.use_bodc_name,
-            event_qualifier2=qualifier,
+            odf_dtype=qualifier,
             output_path=pconfig.odf_path,
         )
 

@@ -53,14 +53,6 @@ def general_options(input_files=True):
             help="Expression for odf file or files name",
         ),
         click.option(
-            "--odf_dtype",
-            type=click.Choice(['both', 'vel', 'anc']),
-            help="Type of ODF file to output.",
-            nargs=1,
-            default='both',
-            show_default=True,
-        ),
-        click.option(
             "--merge/--no-merge",
             help="""Merge input into one output file.,
         Default --merge""",

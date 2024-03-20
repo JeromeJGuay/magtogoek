@@ -7,14 +7,10 @@ This module contains the entry point for magtogoek CLI app `mtgk`.
 Descriptions:
   FIXME
 
-Usage:
-    $ mtgk config [adcp, platform] [CONFIG_NAME] [OPTIONS]
-
-    $ mtgk process [CONFIG_FILE]
-
-    $ mtgk quick [adcp, ] [INPUT_FILES] [OPTIONS]
-
-    $ mtgk check [rti, ] [INPUT_FILES]
+Usage (use the helper to get more informations):
+    $ mtgk -h
+    or
+    $ mtgk --help
 
 Notes:
     Some module are imported by function since loading pandas, for example, is time consuming. Doing makes the
@@ -34,8 +30,9 @@ import click
 from magtogoek import LOCAL_CONFIGURATION_PATH, DEFAULT_CONFIGURATION_PATH, LOCAL_CONFIG_EXISTS, VERSION, TERMINAL_WIDTH
 from magtogoek.exceptions import MagtogoekExit
 from magtogoek.app_options import general_options, adcp_options, add_options
-
 from magtogoek.utils import is_valid_filename, json2dict, resolve_relative_path
+
+from magtogoek.metoce import FIGURES_VARIABLES as METOCE_FIGURES_VARIABLES
 
 
 LOGO_PATH = resolve_relative_path("static/logo.json", __file__)
@@ -140,9 +137,9 @@ def process(info, config_file: str, **options):
     if configuration['HEADER']['process'] == "adcp":
         from magtogoek.adcp.process import process_adcp
         process_adcp(configuration, headless=options['headless'], from_raw=options["from_raw"])
-    elif configuration['HEADER']['process'] == "meteoce":
-        from magtogoek.meteoce.process import process_meteoce
-        process_meteoce(configuration, headless=options['headless'], from_raw=options["from_raw"])
+    elif configuration['HEADER']['process'] == "metoce":
+        from magtogoek.metoce.process import process_metoce
+        process_metoce(configuration, headless=options['headless'], from_raw=options["from_raw"])
 
 
 # --------------------------- #
@@ -219,31 +216,31 @@ def config_adcp(
     click.secho(f"Config file created for adcp processing -> {config_name}", bold=True)
 
 
-@config.command("meteoce")
+@config.command("metoce")
 @add_options(common_options)
 @click.argument("config_name", metavar="[config_name]", type=str)
 @add_options(general_options())
 @click.pass_context
-def config_meteoce(
+def config_metoce(
         ctx, info, config_name, **options,
 ):
-    """Command to make a meteoce config files. The [OPTIONS] can be added
+    """Command to make a metoce config files. The [OPTIONS] can be added
     before or after the [config_name]."""
 
     from magtogoek.process_configurations import write_configfile
 
     _print_passed_options(options)
     config_name = is_valid_filename(config_name, ext=".ini")
-    options['process'] = 'meteoce'
+    options['process'] = 'metoce'
 
-    write_configfile(filename=config_name, process="meteoce", cli_options=options)
-    click.secho(f"Config file created for meteoce buoy processing -> {config_name}", bold=True)
+    write_configfile(filename=config_name, process="metoce", cli_options=options)
+    click.secho(f"Config file created for metoce buoy processing -> {config_name}", bold=True)
 
 
 @config.command("list_gen_vars")
 @add_options(common_options)
 @click.option("--adcp/-", help="""List generic variable for adcp""", default=False, show_default=True)
-@click.option("--meteoce/-", help="""List generic variable for adcp""", default=False, show_default=True)
+@click.option("--metoce/-", help="""List generic variable for adcp""", default=False, show_default=True)
 @click.pass_context
 def config_list_generic_variables(ctx, info, **options):
     """list the name of the generic variables."""
@@ -251,8 +248,8 @@ def config_list_generic_variables(ctx, info, **options):
     if options['adcp'] is True:
         from magtogoek.adcp import GENERIC_PARAMETERS
         generic_parameters += GENERIC_PARAMETERS
-    if options['meteoce'] is True:
-        from magtogoek.meteoce import GENERIC_PARAMETERS
+    if options['metoce'] is True:
+        from magtogoek.metoce import GENERIC_PARAMETERS
         generic_parameters += GENERIC_PARAMETERS
 
     if not generic_parameters:
@@ -399,16 +396,18 @@ def plot_adcp(ctx, info, input_file, **options):
         print("Wrong format. The netcdf file is missing some attributes or doesn't have the expected variables name.")
 
 
-@plot.command("meteoce", context_settings=CONTEXT_SETTINGS)
+@plot.command("metoce", context_settings=CONTEXT_SETTINGS)
 @add_options(common_options)
 @click.argument("input_file", metavar="[input_files]", nargs=1, type=click.Path(exists=True), required=True)
 @click.option("-s", "--save_fig", help="""Path to save figures to.""", type=click.Path(exists=True), default=None)
+@click.option("-v", "--vars", type=click.Choice(list(METOCE_FIGURES_VARIABLES.keys())), multiple=True,
+              help=f"""Specify which plot(s).""", default=None)
 @click.option("--headless", help="""If True, figures are displayed""", is_flag=True, default=False)
 @click.option("-r", "--plot-raw", help="""If True, data are plotted against raw data if available.""", is_flag=True, default=False)
 @click.pass_context
-def plot_meteoce(ctx, info, input_file, **options):
+def plot_metoce(ctx, info, input_file, **options):
     import xarray as xr
-    from magtogoek.meteoce.plots import make_meteoce_figure
+    from magtogoek.metoce.plots import make_metoce_figure
     dataset = xr.open_dataset(input_file)
     try:
         raw_dataset = None
@@ -419,7 +418,8 @@ def plot_meteoce(ctx, info, input_file, **options):
                 raw_dataset = xr.open_dataset(raw_data_path).sel(time=slice(dataset.time[0], dataset.time[-1]))
             else:
                 print(f"Raw data file not found ({raw_dataset}).")
-        make_meteoce_figure(dataset, save_path=options['save_fig'], show_fig=not options['headless'], dataset_raw=raw_dataset)
+        make_metoce_figure(dataset, variables_groupes=options['vars'], save_path=options['save_fig'],
+                           show_fig=not options['headless'], dataset_raw=raw_dataset)
 
     except KeyError:
         print("Wrong format. The netcdf file is missing some attributes or doesn't have the expected variables name.")

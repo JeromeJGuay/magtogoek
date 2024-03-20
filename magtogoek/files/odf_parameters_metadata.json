@@ -231,14 +231,14 @@
         "print_field_width": 10,
         "print_decimal_places": 4
     },
-    "co2_air": {
+    "pco2_air": {
         "code": "ACO2_01",
         "name": "Partial pressure of carbon dioxide in the atmosphere",
         "units": "utam",
         "print_field_width": 10,
         "print_decimal_places": 4
     },
-    "co2_water": {
+    "pco2_water": {
         "code": "PCO2_01",
         "name": "Partial pressure of carbone dioxide in the water body",
         "units": "utam",

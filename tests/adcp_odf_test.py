@@ -83,7 +83,7 @@ def test_platform_type(platform_type, headers, cruise_platform):
                    global_attributes=GLOBAL_ATTRS,
                    p01_codes_map=P01_TO_GENERIC_NAME,
                    use_bodc_name=True,
-                   event_qualifier2='VEL',
+                   odf_dtype='VEL',
                    output_path=None,
                    )
     assert odf.cruise["platform"] == cruise_platform

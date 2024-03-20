@@ -2,8 +2,8 @@
 Date: July 2022
 Made by: jeromejguay
 
-This script has to functions to process and quick process meteoce buoy data.
-These functions are called by the app command `process` and `quick meteoce`.
+This script has to functions to process and quick process metoce buoy data.
+These functions are called by the app command `process` and `quick metoce`.
 
 Notes
 -----
@@ -30,6 +30,7 @@ import numpy as np
 import xarray as xr
 
 from magtogoek import logger as l
+from magtogoek.navigation import compute_speed_and_course, compute_uv_ship
 
 from magtogoek.tools import cut_index, cut_times
 from magtogoek.process_common import BaseProcessConfig, resolve_output_paths, add_global_attributes, write_log, \
@@ -39,20 +40,18 @@ from magtogoek.process_common import BaseProcessConfig, resolve_output_paths, ad
 from magtogoek.attributes_formatter import format_variables_names_and_attributes
 from magtogoek.platforms import PlatformMetadata
 
-from magtogoek.wps.sci_tools import compute_in_situ_density, dissolved_oxygen_ml_per_L_to_umol_per_L, dissolved_oxygen_umol_per_L_to_umol_per_kg
+from magtogoek.wps.sci_tools import dissolved_oxygen_ml_per_L_to_umol_per_L, dissolved_oxygen_umol_per_L_to_umol_per_kg
 
-from magtogoek.meteoce.loader import load_meteoce_data
-from magtogoek.meteoce.correction import apply_sensors_corrections, apply_magnetic_correction, apply_motion_correction
-from magtogoek.meteoce.quality_control import meteoce_quality_control, no_meteoce_quality_control
-from magtogoek.meteoce.plots import make_meteoce_figure
-from magtogoek.meteoce.odf_exporter import make_odf
+from magtogoek.metoce.loader import load_metoce_data
+from magtogoek.metoce.correction import apply_sensors_corrections, apply_magnetic_correction, apply_motion_correction, \
+    compute_ctd_potential_density
+from magtogoek.metoce.quality_control import metoce_quality_control, no_metoce_quality_control
+from magtogoek.metoce.plots import make_metoce_figure
+from magtogoek.metoce.odf_exporter import make_odf
 
 from magtogoek.adcp.quality_control import adcp_quality_control, no_adcp_quality_control
 
-from magtogoek.navigation import compute_speed_and_course, compute_uv_ship
-
-
-l.get_logger("meteoce_processing")
+l.get_logger("metoce_processing")
 
 STANDARD_GLOBAL_ATTRIBUTES = {"featureType": "timeSeriesProfile"}
 
@@ -60,10 +59,10 @@ VARIABLES_TO_DROP = ['ph_temperature']
 # The following variables can be added to the VARIABLES_TO_DROP list during processing.
 # 'pres', 'raw_dissolved_oxygen' 'magnetic_declination'
 
-GLOBAL_ATTRS_TO_DROP = ['ph_iscorrected']
+GLOBAL_ATTRS_TO_DROP = []
 
 
-# This mapping can be changed by the meteoce.corrections modules.
+# This mapping can be changed by the metoce.corrections modules.
 P01_CODES_MAP = {
     'time': "ELTMEP01",
     "wind_speed": "EWSBSS01",
@@ -113,10 +112,10 @@ P01_CODES_MAP = {
     'fdom': "CCOMD002",
     'fdom_QC': "CCOMD002_QC",
     'nitrate': "NTRZZZXX", # Unsure about the units
-    'co2_air': "ACO2XXXX",
-    'co2_air_QC': "ACO2XXXX_QC",
-    'co2_water': "PCO2XXXX",
-    'co2_water_QC': "PCO2XXXX_QC",
+    'pco2_air': "ACO2XXXX",
+    'pco2_air_QC': "ACO2XXXX_QC",
+    'pco2_water': "PCO2XXXX",
+    'pco2_water_QC': "PCO2XXXX_QC",
     'u': "LCEWAP01",
     'u_QC': "LCEWAP01_QC",
     'v': "LCNSAP01",
@@ -147,24 +146,19 @@ SENSORS_TO_VARIABLES_MAP = {
     "ph": ['ph'],
     'par': ['par'],
     'eco': ['scattering', 'chlorophyll', 'fdom'],
-    'pco2': ['co2_air', 'co2_water'],
+    'pco2': ['pco2_air', 'pco2_water'],
     'wave': ['wave_mean_height', 'wave_maximal_height', 'wave_period'],
     'wind': ["wind_speed", "wind_direction", "wind_gust"],
     'meteo': ['atm_temperature', 'atm_humidity', 'atm_pressure']
 }
 
 
-# If modified, carry the modification to `meteoce.process.ProcessConfig` and to `config_handler.py`.
-SPIKE_QC_VARIABLES = [
-    "salinity", "temperature", "dissolved_oxygen", "co2_water", "ph", "scattering", "chlorophyll", "fdom"
-]
-
 
 class ProcessConfig(BaseProcessConfig):
     # PROCESSING
     buoy_name: str = None
-    data_format: str = None  # [viking, mitis]
-    sampling_depth: float = None  # Used for computation *(density) and for EVENT HEADER IN METEOCE
+    data_format: str = None  # [viking, metis]
+    sampling_depth: float = None  # Used for computation *(density) and for EVENT HEADER IN METOCE
 
     ##### ID #####
     adcp_id: str = None
@@ -246,9 +240,6 @@ class ProcessConfig(BaseProcessConfig):
     dissolved_oxygen_spike_threshold: float = None
     dissolved_oxygen_spike_window: int = None
 
-    co2_water_spike_threshold: float = None
-    co2_water_spike_window: int = None
-
     ph_spike_threshold: float = None
     ph_spike_window: int = None
 
@@ -266,7 +257,7 @@ class ProcessConfig(BaseProcessConfig):
 
     ##### QUALITY_CONTROL #####
 
-    # meteoce
+    # metoce
     quality_control: bool = None
     propagate_flags: bool = True
 
@@ -280,10 +271,13 @@ class ProcessConfig(BaseProcessConfig):
     adcp_pitch_threshold: float = None
     adcp_roll_threshold: float = None
 
+    # Processing Flag
+    ph_is_corrected: bool = False
+
 
     def __init__(self, config_dict: dict = None):
         super().__init__(config_dict)
-        self.platform_type = "buoy"  # This needs to be buoy
+        self.platform_type = "buoy"  # This needs to be "buoy"
         self.sensors_to_variables_map = SENSORS_TO_VARIABLES_MAP
         self.variables_to_drop = VARIABLES_TO_DROP
         self.global_attributes_to_drop = GLOBAL_ATTRS_TO_DROP
@@ -312,8 +306,8 @@ class ProcessConfig(BaseProcessConfig):
         self.magnetic_correction_to_apply: float = None
 
 
-def process_meteoce(config: dict, drop_empty_attrs: bool = False,
-                    headless: bool = False, from_raw: bool = False):
+def process_metoce(config: dict, drop_empty_attrs: bool = False,
+                   headless: bool = False, from_raw: bool = False):
     """Process Viking data with parameters from a config file.
 
     call process_common.process
@@ -338,16 +332,16 @@ def process_meteoce(config: dict, drop_empty_attrs: bool = False,
     pconfig.headless = headless
     pconfig.from_raw = from_raw
 
-    _process_meteoce_data(pconfig)
+    _process_metoce_data(pconfig)
 
 
 @resolve_output_paths
-def _process_meteoce_data(pconfig: ProcessConfig):
+def _process_metoce_data(pconfig: ProcessConfig):
 
     # ------------------- #
     # LOADING VIKING DATA #
     # ------------------- #
-    dataset = _load_viking_data(pconfig)
+    dataset = _load_metoce_data(pconfig)
 
     # ----------------------------------------- #
     # ADDING THE NAVIGATION DATA TO THE DATASET #
@@ -366,10 +360,10 @@ def _process_meteoce_data(pconfig: ProcessConfig):
         _compute_uv_ship(dataset=dataset)
 
     # ------------------- #
-    # METEOCE CORRECTION  #
+    # METOCE CORRECTION  #
     # ------------------- #
 
-    l.section("Meteoce data correction")
+    l.section("Metoce data correction")
 
     apply_magnetic_correction(dataset, pconfig)
 
@@ -378,13 +372,13 @@ def _process_meteoce_data(pconfig: ProcessConfig):
     apply_sensors_corrections(dataset, pconfig)
 
     # --------------- #
-    # METEOCE COMPUTE #
+    # METOCE COMPUTE #
     # --------------- #
 
-    l.section("Meteoce data computation.")
+    l.section("Metoce data computation.")
 
     if 'density' not in dataset or pconfig.recompute_density is True:
-        _compute_ctd_potential_density(dataset, pconfig)
+        compute_ctd_potential_density(dataset, pconfig)
 
     # --------------- #
     # QUALITY CONTROL #
@@ -402,11 +396,11 @@ def _process_meteoce_data(pconfig: ProcessConfig):
 
     add_platform_metadata_to_dataset(dataset=dataset, pconfig=pconfig)
 
-    # >>>> METEOCE SPECIFIC
+    # >>>> METOCE SPECIFIC
     _add_platform_instrument_metadata_to_dataset(dataset, pconfig)
 
     if pconfig.sampling_depth is not None:
-        dataset.attrs['sampling_depth_m'] = pconfig.sampling_depth # used for ODF and remove from netcdf output.
+        dataset.attrs['sampling_depth_m'] = pconfig.sampling_depth # used for ODF. Is removed from netcdf output.
     # <<<<
 
     # ------------- #
@@ -427,7 +421,7 @@ def _process_meteoce_data(pconfig: ProcessConfig):
         p01_codes_map=pconfig.p01_codes_map,
         cf_profile_id='time'
     )
-    # >>>> METEOCE SPECIFIC
+    # >>>> METOCE SPECIFIC
     _add_platform_instrument_metadata_to_variables(dataset, pconfig)
     # <<<<
 
@@ -438,7 +432,7 @@ def _process_meteoce_data(pconfig: ProcessConfig):
     if pconfig.figures_output is True:
         #if plot_against_raw ... (add to pconfig comon)
         dataset_raw=load_netcdf_raw(pconfig).sel(time=slice(dataset.time[0], dataset.time[-1]))
-        make_meteoce_figure(
+        make_metoce_figure(
             dataset,
             save_path=pconfig.figures_path,
             show_fig=not pconfig.headless,
@@ -484,12 +478,11 @@ def _process_meteoce_data(pconfig: ProcessConfig):
         write_log(pconfig)
 
 
-def _load_viking_data(pconfig: ProcessConfig):
+def _load_metoce_data(pconfig: ProcessConfig):
     if netcdf_raw_exist(pconfig) and pconfig.from_raw is not True:
         dataset = load_netcdf_raw(pconfig)
-        l.log(f"Data loaded from {pconfig.netcdf_raw_path}.")
     else:
-        dataset = load_meteoce_data(
+        dataset = load_metoce_data(
             filenames=pconfig.input_files,
             buoy_name=pconfig.buoy_name,
             data_format=pconfig.data_format,
@@ -508,80 +501,10 @@ def _load_viking_data(pconfig: ProcessConfig):
         )
     )
 
+    if 'ph' in dataset:
+        pconfig.ph_is_corrected = bool(dataset.attrs.pop('is_corrected'))
+
     return dataset
-
-
-def _compute_ctd_potential_density(dataset: xr.Dataset, pconfig: ProcessConfig):
-    """Compute potential density as sigma_t:= Density(S,T,P) - 1000
-
-    Density computed using TEOS-10 polynomial (Roquet et al., 2015)
-
-    """
-
-    required_variables = ['temperature', 'salinity']
-    if all((var in dataset for var in required_variables)):
-        _log_msg = 'Potential density computed using TEOS-10 polynomial. Absolute Salinity, Conservative Temperature'
-
-        if "lon" in dataset.variables:
-            longitude = dataset.lon.data
-        elif isinstance(pconfig.platform_metadata.platform.latitude, (int, float)):
-            longitude = pconfig.platform_metadata.platform.latitude
-            _log_msg += f', longitude = {longitude}'
-        else:
-            longitude = 0
-            _log_msg += ', longitude = 0'
-
-        if "lat" in dataset.variables:
-            latitude = dataset.lat.data
-        elif isinstance(pconfig.platform_metadata.platform.latitude, (int, float)):
-            latitude = pconfig.platform_metadata.platform.latitude
-            _log_msg += f', latitude = {latitude}'
-        else:
-            latitude = 0
-            _log_msg += ', latitude = 0'
-
-        if 'pres' in dataset.variables:
-            pres = dataset.pres.values
-        else:
-            pres = 0
-            _log_msg += f', pressure = 0'
-
-        density = compute_in_situ_density(
-            temperature=dataset.temperature.data,
-            salinity=dataset.salinity.data,
-            pres=pres,
-            latitude=latitude,
-            longitude=longitude
-        )
-
-        dataset['density'] = (['time'], density - 1000)
-
-        l.log(_log_msg + '.')
-    else:
-        l.warning(f'Potential density computation aborted. One of more variables in {required_variables} was missing.')
-
-
-def _recompute_speed_course(dataset: xr.Dataset):
-    if all(v in dataset for v in ['lon', 'lat']):
-        l.log('Platform `speed` and `course` computed from longitude and latitude data.')
-        compute_speed_and_course(dataset=dataset)
-    else:
-        l.warning("Could not compute `speed` and `course`. `lon`/`lat` data not found.")
-
-
-def _compute_uv_ship(dataset: xr.Dataset):
-    if all(x in dataset for x in ('speed', 'course')):
-        l.log('Platform `u_ship`, `v_ship` computed from speed and course data.')
-        compute_uv_ship(dataset=dataset)
-
-    elif all(v in dataset for v in ['lon', 'lat']):
-        l.log('Platform velocities (u_ship, v_ship) computed from longitude and latitude data.')
-        compute_speed_and_course(dataset=dataset)
-        compute_uv_ship(dataset=dataset)
-
-    else:
-        l.warning("Could not compute `u_ship` and `v_ship`. GPS data not found.")
-
 
 
 def _quality_control(dataset: xr.Dataset, pconfig: ProcessConfig) -> xr.Dataset:
@@ -590,30 +513,12 @@ def _quality_control(dataset: xr.Dataset, pconfig: ProcessConfig) -> xr.Dataset:
     Or call the qc function from viking_quality_control. ??
     """
     if pconfig.quality_control is True:
-        _meteoce_quality_control(dataset, pconfig)
+        metoce_quality_control(dataset, pconfig=pconfig)
         _adcp_quality_control(dataset, pconfig)
     else:
-        no_meteoce_quality_control(dataset)
+        no_metoce_quality_control(dataset)
         no_adcp_quality_control(dataset, velocity_only=True)
 
-    return dataset
-
-
-def _meteoce_quality_control(dataset: xr.Dataset, pconfig: ProcessConfig):
-    """fixme"""
-    spike_tests = {
-        var: {
-            'threshold': pconfig.__getattribute__(var + "_spike_threshold"),
-            'window': pconfig.__getattribute__(var + "_spike_window")}
-        for var in SPIKE_QC_VARIABLES
-    }
-    dataset = meteoce_quality_control(
-        dataset,
-        regional_outlier=pconfig.regional_outlier,
-        absolute_outlier=pconfig.absolute_outlier,
-        propagate_flags=pconfig.propagate_flags,
-        spike_tests = spike_tests
-    )
     return dataset
 
 
@@ -755,3 +660,29 @@ def _write_odf(dataset: xr.Dataset, pconfig: ProcessConfig):
         use_bodc_name=pconfig.use_bodc_name,
         output_path=pconfig.odf_path,
     )
+
+
+def _recompute_speed_course(dataset: xr.Dataset):
+    if all(v in dataset for v in ['lon', 'lat']):
+        l.log('Platform `speed` and `course` computed from longitude and latitude data.')
+        compute_speed_and_course(dataset=dataset)
+    else:
+        l.warning("Could not compute `speed` and `course`. `lon`/`lat` data not found.")
+
+
+def _compute_uv_ship(dataset: xr.Dataset):
+    if all(x in dataset for x in ('speed', 'course')):
+        l.log('Platform `u_ship`, `v_ship` computed from speed and course data.')
+        compute_uv_ship(dataset=dataset)
+        dataset["u_ship"] = np.round(dataset["u_ship"], 2)
+        dataset["v_ship"] = np.round(dataset["v_ship"], 2)
+
+    elif all(v in dataset for v in ['lon', 'lat']):
+        l.log('Platform velocities (u_ship, v_ship) computed from longitude and latitude data.')
+        compute_speed_and_course(dataset=dataset)
+        compute_uv_ship(dataset=dataset)
+        dataset["u_ship"] = np.round(dataset["u_ship"], 2)
+        dataset["v_ship"] = np.round(dataset["v_ship"], 2)
+
+    else:
+        l.warning("Could not compute `u_ship` and `v_ship`. GPS data not found.")

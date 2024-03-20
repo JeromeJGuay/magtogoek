@@ -1,7 +1,7 @@
 """
 Tag Example:
 
-(Note that all Mitis Tag Data are transmitted on a single line)
+(Note that all Metis Tag Data are transmitted on a single line)
 
 [INIT]PMZA-RIKI,2024-02-08,23:30:00,48°38.459'N,068°09.406'W,-9.04,0.1,0.4,NAN,NAN,17.6,1113.533
 [POWR]12.23,0.00,0.00,0.00,0.00,0.00,0.35,0.53,0.00,0,01010100
@@ -67,7 +67,7 @@ DAT_FILE_DATA_STRUCTURE = {
     'atms': ['air_temperature', 'air_humidity', 'air_pressure', 'par', 'rain_total', 'rain_duration', 'rain_intensity'],
     'wave': ['date', 'time', 'period', 'hm0', 'h13', 'hmax'],
     'adcp': ['date', 'time', 'u', 'v', 'w', 'e'],
-    'pco2': ['co2_ppm_air', 'co2_ppm_water', 'gas_pressure_air', 'gas_pressure_water', 'air_humidity'],
+    'pco2': ['co2_ppm_air', 'co2_ppm_water', 'gas_pressure_air_mbar', 'gas_pressure_water_mbar', 'air_humidity'],
     'wnch': ['message']
 }
 
@@ -76,7 +76,7 @@ INSTRUMENTS_TAG = [_tag.upper() for _tag in DAT_FILE_DATA_STRUCTURE.keys()]
 DATA_TAG_REGEX = re.compile(rf"\[({'|'.join(INSTRUMENTS_TAG)})]((?:(?!\[).)*)", re.DOTALL)
 
 
-MITIS_VARIABLES = {
+METIS_VARIABLES = {
     'init': ['buoy_name', 'time', 'latitude', 'longitude', 'heading', 'pitch', 'roll', 'pitch_std', 'roll_std',
              'cog', 'sog', 'magnetic_declination', 'water_detection'],
     'powr': ['volt_batt_1', 'amp_batt_1', 'volt_batt_2', 'amp_batt_2', 'volt_solar', 'amp_solar', 'amp_main', 'amp_turbine', 'amp_winch', 'pm_rh', 'relay_state'],
@@ -88,11 +88,11 @@ MITIS_VARIABLES = {
     'atms': ['air_temperature', 'air_humidity', 'air_pressure', 'par', 'rain_total', 'rain_duration', 'rain_intensity'],
     'wave': ['time', 'period', 'hm0', 'h13', 'hmax'],
     'adcp': ['time', 'u', 'v', 'w', 'e'],
-    'pco2': ['co2_ppm_air', 'co2_ppm_water', 'gas_pressure_air', 'gas_pressure_water', 'air_humidity'],
+    'pco2': ['co2_ppm_air', 'co2_ppm_water', 'gas_pressure_air_mbar', 'gas_pressure_water_mbar', 'air_humidity'],
     'wnch': ['message']
 }
 
-MITIS_FLOAT_VARIABLES = {
+METIS_FLOAT_VARIABLES = {
     'init': ['latitude', 'longitude', 'heading', 'pitch', 'roll', 'pitch_std', 'roll_std',
              'cog', 'sog', 'magnetic_declination', 'water_detection'],
     'powr': ['volt_batt_1', 'amp_batt_1', 'volt_batt_2', 'amp_batt_2', 'volt_solar', 'amp_solar', 'amp_main', 'amp_turbine', 'amp_winch'],
@@ -104,38 +104,38 @@ MITIS_FLOAT_VARIABLES = {
     'atms': ['air_temperature', 'air_humidity', 'air_pressure', 'par', 'rain_total', 'rain_duration', 'rain_intensity'],
     'wave': ['period', 'hm0', 'h13', 'hmax'],
     'adcp': ['u', 'v', 'w', 'e'],
-    'pco2': ['co2_ppm_air', 'co2_ppm_water', 'gas_pressure_air', 'gas_pressure_water', 'air_humidity'],
+    'pco2': ['co2_ppm_air', 'co2_ppm_water', 'gas_pressure_air_mbar', 'gas_pressure_water_mbar', 'air_humidity'],
     'wnch': []
 }
 
 NAT_FILL_VALUE = "NaT"
 NAN_FILL_VALUE = np.nan
 
-class MitisData:
-    """Object to store Mitis data.
+class MetisData:
+    """Object to store Metis data.
     Data are store under the tag attribute e.g. self.init, selft. power ... etc.
     """
 
     def __init__(self, buoy_name: str):
         self.buoy_name: str = buoy_name # required (same as for viking_dat_reader.VikingData)
 
-        self.tags = tuple(t for t in MITIS_VARIABLES)
+        self.tags = tuple(t for t in METIS_VARIABLES)
 
         # coords
         self.time: Union[list, np.ndarray] = [] # required (same as for viking_dat_reader.VikingData)
 
-        self.init = {key: [] for key in MITIS_VARIABLES['init']}
-        self.powr = {key: [] for key in MITIS_VARIABLES['powr']}
-        self.eco1 = {key: [] for key in MITIS_VARIABLES['eco1']}
-        self.ctd = {key: [] for key in MITIS_VARIABLES['ctd']}
-        self.ph = {key: [] for key in MITIS_VARIABLES['ph']}
-        self.no3 = {key: [] for key in MITIS_VARIABLES['no3']}
-        self.wind = {key: [] for key in MITIS_VARIABLES['wind']}
-        self.atms = {key: [] for key in MITIS_VARIABLES['atms']}
-        self.wave = {key: [] for key in MITIS_VARIABLES['wave']}
-        self.adcp = {key: [] for key in MITIS_VARIABLES['adcp']}
-        self.pco2 = {key: [] for key in MITIS_VARIABLES['pco2']}
-        self.wnch = {key: [] for key in MITIS_VARIABLES['wnch']}
+        self.init = {key: [] for key in METIS_VARIABLES['init']}
+        self.powr = {key: [] for key in METIS_VARIABLES['powr']}
+        self.eco1 = {key: [] for key in METIS_VARIABLES['eco1']}
+        self.ctd = {key: [] for key in METIS_VARIABLES['ctd']}
+        self.ph = {key: [] for key in METIS_VARIABLES['ph']}
+        self.no3 = {key: [] for key in METIS_VARIABLES['no3']}
+        self.wind = {key: [] for key in METIS_VARIABLES['wind']}
+        self.atms = {key: [] for key in METIS_VARIABLES['atms']}
+        self.wave = {key: [] for key in METIS_VARIABLES['wave']}
+        self.adcp = {key: [] for key in METIS_VARIABLES['adcp']}
+        self.pco2 = {key: [] for key in METIS_VARIABLES['pco2']}
+        self.wnch = {key: [] for key in METIS_VARIABLES['wnch']}
 
     def __repr__(self):
         repr = (
@@ -168,7 +168,7 @@ class MitisData:
                 for variable in self.__dict__[tag]:
                     if variable == 'time':
                         _dtype = 'datetime64[s]'
-                    elif variable in MITIS_FLOAT_VARIABLES[tag]:
+                    elif variable in METIS_FLOAT_VARIABLES[tag]:
                         _dtype = 'float'
                     else:
                         _dtype = 'str'
@@ -183,13 +183,13 @@ def _tag_is_empty(data: Dict[str, list]):
 
 
 
-class RawMitisDatReader:
-    """Read Raw Dta file from Mitis Buoy.
-    The data are puts in a MitisData object and are accessible as attributes"
+class RawMetisDatReader:
+    """Read Raw Dta file from Metis Buoy.
+    The data are puts in a MetisData object and are accessible as attributes"
     """
 
     def __init__(self):
-        self._buoys_data: Optional[Dict[str, MitisData]] = None
+        self._buoys_data: Optional[Dict[str, MetisData]] = None
         self.buoys: Optional[list] = None
 
     def __repr__(self):
@@ -199,7 +199,7 @@ class RawMitisDatReader:
             _repr += f"  {buoy_name}: (length = {len(viking_data)})\n"
         return _repr
 
-    def read(self, filenames) -> Union[MitisData, Dict[str, MitisData]]:
+    def read(self, filenames) -> Union[MetisData, Dict[str, MetisData]]:
         filenames = get_files_from_expression(filenames)
         _num_of_files = len(filenames)
 
@@ -215,20 +215,20 @@ class RawMitisDatReader:
             _num_file_read += 1
         print(f'File read: {_num_file_read}/{_num_of_files}')
 
-        self._load_mitis_data(unpacked_data=unpacked_data)
+        self._load_metis_data(unpacked_data=unpacked_data)
 
         if len(self._buoys_data) == 1:
             return list(self._buoys_data.values())[0]
         else:
             return self._buoys_data
 
-    def _load_mitis_data(self, unpacked_data: List[Dict[str, Dict[str, str]]]):
+    def _load_metis_data(self, unpacked_data: List[Dict[str, Dict[str, str]]]):
         self._buoys_data = {}
 
         buoy_names = set([_d['init']['buoy_name'] for _d in unpacked_data])
 
         for key in buoy_names:
-            self._buoys_data[key] = MitisData(buoy_name=key)
+            self._buoys_data[key] = MetisData(buoy_name=key)
             self.__setattr__(key, self._buoys_data[key])
 
         _ensemble_count = 0
@@ -238,12 +238,12 @@ class RawMitisDatReader:
             buoy_data = self._buoys_data[_data['init']['buoy_name']]
             buoy_data.time.append(_data['init']['time'])
 
-            for tag in MITIS_VARIABLES:
+            for tag in METIS_VARIABLES:
                 if tag in _data:
                     for key in _data[tag]:
                         buoy_data.__dict__[tag][key].append(_data[tag][key])
                 else:
-                    for key in MITIS_VARIABLES[tag]:
+                    for key in METIS_VARIABLES[tag]:
                         if key == "time":
                             buoy_data.__dict__[tag][key].append(NAT_FILL_VALUE)
                         else:
@@ -252,12 +252,12 @@ class RawMitisDatReader:
             _ensemble_count += 1
         print(f'Data Ensemble loaded: {_ensemble_count}/{_number_of_ensemble}', end='\r')
 
-        for mitis_data in self._buoys_data.values():
-            mitis_data.drop_empty_tag()
-            mitis_data.to_numpy_array()
+        for metis_data in self._buoys_data.values():
+            metis_data.drop_empty_tag()
+            metis_data.to_numpy_array()
 
 def _unpack_data_from_tag_string(data: str) -> Dict[str, Dict[str, str]]:
-    """Unpack Mitis Tag Data
+    """Unpack Metis Tag Data
     Returns Data as a dictionary of {TAG:DATA}
     """
 
@@ -307,8 +307,8 @@ def _degree_minute_to_degree_decimal(value: str) -> float:
          return 'NAN'
 
 
-if __name__ == '__main__':
-    #filename = "/home/jeromejguay/ImlSpace/Projects/mitis-buoy-controller/tests/PMZA-RIKI_FileTAGS.dat"
-    #filename = "/home/jeromejguay/ImlSpace/Projects/magtogoek/tests/data/mitis_raw/PMZA-RIKI_FileTAGS.dat"
-    filename = "/home/jeromejguay/ImlSpace/Data/pmza_2023/IML-4/PMZA-RIKI_FileTAGS_2023.dat"
-    md = RawMitisDatReader().read(filenames=filename)
+# if __name__ == '__main__':
+#     import matplotlib.pyplot as plt
+#
+#     filename = "/home/jeromejguay/ImlSpace/Data/pmza_2023/IML-4/PMZA-RIKI_FileTAGS.dat"
+#     md = RawMetisDatReader().read(filenames=filename)

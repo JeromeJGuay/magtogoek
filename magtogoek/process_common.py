@@ -29,7 +29,7 @@ ADCP_DATA_TYPES = { # SHOULDN'T THIS BE IN THE adcp/__init__.py FIXME
     "ship": "adcp",
     "lowered": "adcp"
 }
-METEOCE_DATA_TYPE = "MMOB" # SHOULDN'T THIS BE IN THE adcp/__init__.py FIXE
+METOCE_DATA_TYPE = "MMOB" # SHOULDN'T THIS BE IN THE adcp/__init__.py FIXE
 
 DATA_SUBTYPES = {
     "buoy": "BUOY",
@@ -95,7 +95,6 @@ class BaseProcessConfig:
 
     make_figures: tp.Union[str, bool] = None
     make_log: bool = None
-    odf_data: str = None
 
     from_raw: bool = None
 
@@ -220,8 +219,8 @@ def add_platform_metadata_to_dataset(dataset: xr.Dataset, pconfig: BaseProcessCo
 def _get_data_type(process: str, platform_type: str = None):
     """Return data_type for the given process and platform_type.
     """
-    if process == 'meteoce':
-        return METEOCE_DATA_TYPE
+    if process == 'metoce':
+        return METOCE_DATA_TYPE
     elif process == "adcp":
         if platform_type is None:
             platform_type = DEFAULT_PLATFORM_TYPE
@@ -230,7 +229,7 @@ def _get_data_type(process: str, platform_type: str = None):
 
 
 def resolve_output_paths(process_function: tp.Callable[[BaseProcessConfig], None]):
-    """Decorator that wraps around a process_function e.g. meteoce.process.process_viking.
+    """Decorator that wraps around a process_function e.g. metoce.process.process_viking.
 
     If `pconfig.merge_output_files` is False, each input file is process individually and output
     names suffixes are made for each file if needed, before calling the process_function.
@@ -465,11 +464,18 @@ def netcdf_raw_exist(pconfig: BaseProcessConfig):
 
 def load_netcdf_raw(pconfig: BaseProcessConfig) -> xr.Dataset:
     netcdf_raw_path = Path(pconfig.netcdf_raw_path).with_suffix('.nc')
-    return xr.open_dataset(netcdf_raw_path)
+    dataset = xr.open_dataset(netcdf_raw_path)
+
+    l.append_to_logbook(dataset.attrs.pop('history'))
+
+    return dataset
 
 
 def write_netcdf_raw(dataset: xr.Dataset, pconfig: BaseProcessConfig):
     netcdf_raw_path = Path(pconfig.netcdf_raw_path).with_suffix('.nc')
+
+    dataset.attrs['history'] = l.logbook
+
     dataset.to_netcdf(netcdf_raw_path)
     dataset.close()
     l.log(f"netcdf raw file made -> {netcdf_raw_path}")

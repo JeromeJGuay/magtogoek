@@ -24,7 +24,7 @@ def apply_motion_correction(dataset: xr.Dataset, mode: str):
             return
 
     elif mode == "nav":
-        _msg = "Motion correction was carried out with navigation data"
+        _msg = "Motion correction was carried out with navigation data. Data rounded to mm precision (3 decimal places)."
         if all(f"{v}_ship" in dataset for v in ["u", "v"]):
             for field in ["u", "v"]:
                 velocity_correction = dataset[field + "_ship"]
@@ -32,7 +32,7 @@ def apply_motion_correction(dataset: xr.Dataset, mode: str):
                 if 'depth' in dataset[field].coords:
                     velocity_correction = np.tile(velocity_correction, (dataset.depth.size, 1))
 
-                dataset[field] += velocity_correction
+                dataset[field] += np.round(velocity_correction, 3) # rounding to millimeter. (ADCP precision)
                 add_correction_attributes_to_dataarray(dataset[field])
                 dataset[field].attrs['corrections'] += _msg + '\n'
 

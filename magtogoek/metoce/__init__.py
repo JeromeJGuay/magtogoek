@@ -1,5 +1,5 @@
 """
-Sub-Package for meteoce data processing.
+Sub-Package for metoce data processing.
 """
 SENSOR_TYPES = [
     'pco2',  # co2 atm
@@ -33,8 +33,8 @@ GENERIC_PARAMETERS = [
     'scattering',
     'chlorophyll',
     'fdom',
-    'co2_air',
-    'co2_water',
+    'pco2_air',
+    'pco2_water',
     'u',
     'v',
     'w',
@@ -66,3 +66,18 @@ GENERIC_PARAMETERS = [
     'u_ship',
     'v_ship'
 ]
+
+FIGURES_VARIABLES = {
+    'gsp_position': ['lon', 'lat'],
+    'gps_motion': ['speed', 'course', 'u_ship', 'v_ship'],
+    'compass': ['heading', 'roll_', 'pitch', 'roll_std', 'pitch_std'],
+    'velocity': ['u', 'v', 'w'],
+    'wind': ["wind_speed", "wind_direction", "wind_gust"],
+    'meteo': ['atm_temperature', 'atm_humidity', 'atm_pressure'],
+    'wave': ['wave_mean_height', 'wave_maximal_height', 'wave_period', 'wave_direction'],
+    'ctdo': ['temperature', 'conductivity', 'salinity', 'density', 'dissolved_oxygen'],
+    'ph': ['ph'],
+    'par': ['par'],
+    'eco': ['scattering', 'chlorophyll', 'fdom'],
+    'pco2': ['pco2_air', 'pco2_water']
+}

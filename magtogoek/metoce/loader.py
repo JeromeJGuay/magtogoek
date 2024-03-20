@@ -29,18 +29,22 @@ from magtogoek.exceptions import MagtogoekExit
 from magtogoek.utils import get_files_from_expression, format_filenames_for_print
 from magtogoek.tools import is_unique, nan_unique
 
-from magtogoek.meteoce.viking_dat_reader import RawVikingDatReader, VikingData
-from magtogoek.meteoce.mitis_dat_reader import RawMitisDatReader, MitisData
+from magtogoek.metoce.viking_dat_reader import RawVikingDatReader, VikingData
+from magtogoek.metoce.metis_dat_reader import RawMetisDatReader, MetisData
 
 import pint_xarray # pint_xarray modify the xr.Dataset Object
 
 
 KNOTS_TO_METER_PER_SECONDS = 0.5144444444 # mps/knots
-MILLIMETER_TO_METER = 1 / 1000
-CENTIMETER_TO_METER = 1 / 100
+MILLIMETER_TO_METER = 1 / 1000 # m / 1000 mmm
+CENTIMETER_TO_METER = 1 / 100  # m / 100 cm
+MILLIBAR_TO_ATMOSPHERE = 1 / 1013.25 # 1 atm / 1013.25 mbar
+
+RTI_FILL_VALUE = 88888
+RDI_FILL_VALUE = -32768.0
 
 
-def load_meteoce_data(
+def load_metoce_data(
         filenames: Union[str, List[str]],
         buoy_name: str = None,
         data_format: str = 'viking',
@@ -58,7 +62,7 @@ def load_meteoce_data(
     -------
 
     """
-    l.section('Loading meteoce data', t=True)
+    l.section('Loading metoce data', t=True)
 
     filenames = get_files_from_expression(filenames)
 
@@ -66,11 +70,11 @@ def load_meteoce_data(
 
     if data_format == "viking":
         buoy_data = RawVikingDatReader().read(filenames)
-    elif data_format == "mitis":
-        buoy_data = RawMitisDatReader().read(filenames)
+    elif data_format == "metis":
+        buoy_data = RawMetisDatReader().read(filenames)
     else:
         l.warning(f'Invalid data_format: {data_format}')
-        raise MagtogoekExit("Invalid meteoce data format. Exiting")
+        raise MagtogoekExit("Invalid metoce data format. Exiting")
 
     if isinstance(buoy_data, Dict):
         l.warning(f'More than one buoy name was found in the file {filenames}.\n'
@@ -82,16 +86,15 @@ def load_meteoce_data(
         l.log(f'Buoy Name found in files is different from the one provided.')
 
     if data_format == "viking":
-        meteoce_data, global_attrs = _load_viking_meteoce_data(buoy_data)
-        buoy_data = RawVikingDatReader().read(filenames)
-    else: #if data_format == "mitis": # not required. Also remove a variable reference warning.
-        meteoce_data, global_attrs = _load_mitis_meteoce_data(buoy_data)
+        metoce_data, global_attrs = _load_viking_metoce_data(buoy_data)
+    else: #if data_format == "metis": # not required. Also remove a variable reference warning.
+        metoce_data, global_attrs = _load_metis_metoce_data(buoy_data)
 
-    _add_time_coords(meteoce_data)
+    _add_time_coords(metoce_data)
 
     coords = {'time': np.asarray(buoy_data.time)}
 
-    dataset = xr.Dataset(meteoce_data, coords=coords, attrs=global_attrs)
+    dataset = xr.Dataset(metoce_data, coords=coords, attrs=global_attrs)
 
     if data_format == "viking":
         dataset = _average_duplicates(dataset, 'time')
@@ -106,7 +109,7 @@ def load_meteoce_data(
     return dataset
 
 
-def _load_viking_meteoce_data(viking_data: VikingData) -> Tuple[Dict[str, Tuple[np.ma.MaskedArray, dict]], Dict]:
+def _load_viking_metoce_data(viking_data: VikingData) -> Tuple[Dict[str, Tuple[np.ma.MaskedArray, dict]], Dict]:
     """
 
     Parameters
@@ -195,10 +198,11 @@ def _load_viking_meteoce_data(viking_data: VikingData) -> Tuple[Dict[str, Tuple[
         l.log('Ctdo data loaded.')
 
     if viking_data.wph is not None:
-        _serial_number = viking_data.wph['serial_number'][~viking_data.wph['serial_number'].mask][0]
-        _model = viking_data.wph['model'][~viking_data.wph['model'].mask][0]
+        mask = np.isfinite(viking_data.wph['ext_ph'])
+        _serial_number = viking_data.wph['serial_number'][mask][0]
+        _model = viking_data.wph['model'][mask][0]
         _attrs = {'serial_number': _serial_number, 'model': _model}
-        global_attrs.update({'ph_serial_number': _serial_number, 'ph_model': _model, 'ph_iscorrected': 0})
+        global_attrs.update({'ph_serial_number': _serial_number, 'ph_model': _model, 'is_corrected': 0})
         data.update(
             {
                 'ph': (viking_data.wph['ext_ph'], {**_attrs, **{"units": "NBS_scale"}}),
@@ -207,8 +211,9 @@ def _load_viking_meteoce_data(viking_data: VikingData) -> Tuple[Dict[str, Tuple[
         l.log('Wph data loaded.')
 
     if viking_data.triplet is not None:
-        _serial_number = viking_data.triplet['serial_number'][~viking_data.triplet['serial_number'].mask][0]
-        _model = viking_data.triplet['model_number'][~viking_data.triplet['model_number'].mask][0]
+        mask = np.isfinite(viking_data.triplet['scatter_calculated'])
+        _serial_number = viking_data.triplet['serial_number'][mask][0]
+        _model = viking_data.triplet['model_number'][mask][0]
         _attrs = {'serial_number': _serial_number, 'model': _model}
         global_attrs.update({'triplet_serial_number': _serial_number, 'triplet_model': _model})
 
@@ -222,23 +227,24 @@ def _load_viking_meteoce_data(viking_data: VikingData) -> Tuple[Dict[str, Tuple[
         l.log('Eco-Triplet data loaded.')
 
     if viking_data.par_digi is not None:
-        _serial_number = viking_data.par_digi['serial_number'][~viking_data.par_digi['serial_number'].mask][0]
-        _model = viking_data.par_digi['model_number'][~viking_data.par_digi['model_number'].mask][0]
+        mask = np.isfinite(viking_data.par_digi['par'])
+        _serial_number = viking_data.par_digi['serial_number'][mask][0]
+        _model = viking_data.par_digi['model_number'][mask][0]
 
         _attrs = {'serial_number': _serial_number, 'model': _model}
         global_attrs.update({'par_serial_number': _serial_number, 'par_triplet_model': _model})
 
-        data['par'] = (viking_data.par_digi['PAR'], {**_attrs, **{"units": "umol/m**2/s"}})
+        data['par'] = (viking_data.par_digi['par'], {**_attrs, **{"units": "umol/m**2/s"}})
         l.log('Par Digi data loaded.')
 
-    if viking_data.co2_a is not None: # co2 partial pressure = (ppm / 1e6)* cell gas pressure
-        data.update({'co2_air': (viking_data.co2_a['cell_gas_pressure_mbar'] * viking_data.co2_a['co2_ppm'] / 1e6,
-                                 {'units': 'uatm'})})
+    if viking_data.co2_a is not None:
+        _pco2_air = viking_data.co2_a['co2_ppm'] * viking_data.co2_a['cell_gas_pressure_mbar'] * MILLIBAR_TO_ATMOSPHERE
+        data.update({'pco2_air': (_pco2_air, {'units': 'uatm'})})
         l.log('Co2_a data loaded.')
 
-    if viking_data.co2_w is not None: # co2 partial pressure = (ppm / 1e6)* cell gas pressure
-        data.update({'co2_water': (viking_data.co2_w['cell_gas_pressure_mbar'] * viking_data.co2_w['co2_ppm'] / 1e6,
-                                   {'units': 'uatm'})})
+    if viking_data.co2_w is not None:
+        _pco2_water = viking_data.co2_w['co2_ppm'] * viking_data.co2_w['cell_gas_pressure_mbar'] * MILLIBAR_TO_ATMOSPHERE
+        data.update({'pco2_water': (_pco2_water, {'units': 'uatm'})})
         l.log('Co2_w data loaded.')
 
     if viking_data.wave_m is not None:
@@ -264,96 +270,102 @@ def _load_viking_meteoce_data(viking_data: VikingData) -> Tuple[Dict[str, Tuple[
         _adcp_data = dict()
         # load RDI data
         for _name in ['u', 'v', 'w', 'e']:
+            viking_data.rdi[_name][viking_data.rdi[_name] == RDI_FILL_VALUE] = np.nan
             _adcp_data[_name] = viking_data.rdi[_name]
 
-        if not any(~viking_data.rti['u'].mask & ~viking_data.rdi['u'].mask):
+        rti_mask = np.isfinite(viking_data.rti['u'])
+        rdi_mask = np.isfinite(viking_data.rdi['u'])
+
+        if not any(rti_mask & rdi_mask):
             l.warning('Merging RDI and RTI data')
             # load RTI data
             for _name in ['u', 'v', 'w', 'e']:
-                _adcp_data[_name][~viking_data.rti[_name].mask] = viking_data.rti[_name][~viking_data.rti[_name].mask]
+                viking_data.rti[_name][viking_data.rti[_name] == RTI_FILL_VALUE] = np.nan
+                _adcp_data[_name][rti_mask] = viking_data.rti[_name][rti_mask]
 
         else:
             l.warning('There is a time overlap between RDI and RTI data. RTI data were discarded.')
 
 
         for _name in ['u', 'v', 'w', 'e']:
-            _adcp_data[_name].mask = viking_data.rti[_name].mask & viking_data.rdi[_name].mask
-            data[_name] = (_adcp_data[_name] * MILLIMETER_TO_METER, {"units": "m/s"})
+            data[_name] = (_adcp_data[_name] * MILLIMETER_TO_METER, {"units": "m/s"}) #rounded to mm.
 
     else:
         if viking_data.rdi is not None:
             for _name in ['u', 'v', 'w', 'e']:
-                data[_name] = (viking_data.rdi[_name] * MILLIMETER_TO_METER, {"units": "m/s"})
+                viking_data.rdi[_name][viking_data.rdi[_name] == RDI_FILL_VALUE] = np.nan
+                data[_name] = (viking_data.rdi[_name] * MILLIMETER_TO_METER, {"units": "m/s"}) #rounded to mm.
             l.log('Rdi data loaded.')
 
         if viking_data.rti is not None:
             for _name in ['u', 'v', 'w', 'e']:
-                data[_name] = (viking_data.rti[_name] * MILLIMETER_TO_METER, {"units": "m/s"})
+                viking_data.rti[_name][viking_data.rti[_name] == RTI_FILL_VALUE] = np.nan
+                data[_name] = (viking_data.rti[_name] * MILLIMETER_TO_METER, {"units": "m/s"}) #rounded to mm.
             l.log('Rti data loaded.')
 
-    data = _fill_data(data)
+    #data = _fill_data(data)
 
     return data, global_attrs
 
 
-def _load_mitis_meteoce_data(mitis_data: MitisData) -> Tuple[Dict[str, Tuple[np.ma.MaskedArray, dict]], Dict]:
+def _load_metis_metoce_data(metis_data: MetisData) -> Tuple[Dict[str, Tuple[np.ma.MaskedArray, dict]], Dict]:
     global_attrs = {}
     data = {
-        'lon': (mitis_data.init['longitude'], {}),
-        'lat': (mitis_data.init['latitude'], {}),
-        'speed': (mitis_data.init['sog'] * KNOTS_TO_METER_PER_SECONDS, {}),
-        'course': (mitis_data.init['cog'], {}),
-        'magnetic_declination': (mitis_data.init['magnetic_declination'], {}),
-        'heading': (mitis_data.init['heading'], {'corrections':'Corrected for magnetic declination at sampling.\n'}),
-        'pitch': (mitis_data.init['pitch'], {}),
-        'roll_': (mitis_data.init['roll'], {}),
-        'pitch_std': (mitis_data.init['pitch_std'], {}),
-        'roll_std': (mitis_data.init['roll_std'], {})
+        'lon': (metis_data.init['longitude'], {}),
+        'lat': (metis_data.init['latitude'], {}),
+        'speed': (metis_data.init['sog'] * KNOTS_TO_METER_PER_SECONDS, {}),
+        'course': (metis_data.init['cog'], {}),
+        'magnetic_declination': (metis_data.init['magnetic_declination'], {}),
+        'heading': (metis_data.init['heading'], {'corrections': 'Corrected for magnetic declination at sampling.\n'}),
+        'pitch': (metis_data.init['pitch'], {}),
+        'roll_': (metis_data.init['roll'], {}),
+        'pitch_std': (metis_data.init['pitch_std'], {}),
+        'roll_std': (metis_data.init['roll_std'], {})
         }
 
-    if mitis_data.eco1 is not None:
+    if metis_data.eco1 is not None:
         data.update(
             {
-                'scattering': (mitis_data.eco1['scattering'], {"units": "/m", "wavelength": "700nm"}),
-                'chlorophyll': (mitis_data.eco1['chlorophyll'], {"units": "mg/m**3", "wavelength": "695nm"}), # ug/L -> mg/m**3
-                'fdom': (mitis_data.eco1['fdom'], {"units": "ppb", "wavelength": "460nm"})# ppb
+                'scattering': (metis_data.eco1['scattering'], {"units": "/m", "wavelength": "700nm"}),
+                'chlorophyll': (metis_data.eco1['chlorophyll'], {"units": "mg/m**3", "wavelength": "695nm"}), # ug/L -> mg/m**3
+                'fdom': (metis_data.eco1['fdom'], {"units": "ppb", "wavelength": "460nm"})# ppb
             }
         )
         l.log('Eco1 data loaded.')
 
-    if mitis_data.ctd is not None:
+    if metis_data.ctd is not None:
         data.update(
-                {'temperature': (mitis_data.ctd['temperature'], {"units": "degree_C"}),
-                 'conductivity': (mitis_data.ctd['conductivity'], {'units': 'S/m'}),
-                 'salinity': (mitis_data.ctd['salinity'], {'units': 'PSU'}),
-                 'density': (mitis_data.ctd['density'], {'units': 'kg/m**3'})
+                {'temperature': (metis_data.ctd['temperature'], {"units": "degree_C"}),
+                 'conductivity': (metis_data.ctd['conductivity'], {'units': 'S/m'}),
+                 'salinity': (metis_data.ctd['salinity'], {'units': 'PSU'}),
+                 'density': (metis_data.ctd['density'], {'units': 'kg/m**3'})
              }
         )
         l.log('ctd data loaded.')
 
-    if mitis_data.ph is not None:
-        if any(np.isfinite(mitis_data.ph['ext_ph_calc'])):
+    if metis_data.ph is not None:
+        if any(np.isfinite(metis_data.ph['ext_ph_calc'])):
             _ph_attrs = {
                 'units': 'NBS_scale',
                 'corrections': 'pH values were computed using in-situ salinity (at sampling).\n'
             }
-            data.update({'ph': (mitis_data.ph['ext_ph_calc'], _ph_attrs)})
-            global_attrs['ph_iscorrected'] = 1
+            data.update({'ph': (metis_data.ph['ext_ph_calc'], _ph_attrs)})
+            global_attrs['is_corrected'] = 1
         else:
             _ph_attrs = {
                 'units': 'NBS_scale'
             }
-            data.update({'ph': (mitis_data.ph['ext_ph'], _ph_attrs)})
-            global_attrs['ph_iscorrected'] = 0
+            data.update({'ph': (metis_data.ph['ext_ph'], _ph_attrs)})
+            global_attrs['is_corrected'] = 0
             l.warning("pH values were not computed using-situ salinity (at sampling).")
         l.log('pH data loaded')
 
-    # if mitis_data.no3 is not None:
+    # if metis_data.no3 is not None:
       # Nitrate Data are not loaded since the correction algorithm are not yet implemented.
 
-    if mitis_data.wind is not None:
-        _s, _c = np.unique(mitis_data.wind['source'], return_counts=True)
-        _counts = {k: round(100 * v/len(mitis_data.wind['source']),2) for k, v in zip(_s, _c)}
+    if metis_data.wind is not None:
+        _s, _c = np.unique(metis_data.wind['source'], return_counts=True)
+        _counts = {k: round(100 * v / len(metis_data.wind['source']), 2) for k, v in zip(_s, _c)}
 
         if '5' in _counts and '7' in _counts: # 'nan could also be there a source. Meaning no data was sampled.
             _msg = f"Wind data were sampled by both the wmt700 ({_counts['7']}%), wxt536 ({_counts['5']}%)"
@@ -363,53 +375,53 @@ def _load_mitis_meteoce_data(mitis_data: MitisData) -> Tuple[Dict[str, Tuple[np.
 
         data.update(
             {
-                'wind_speed': (np.round(mitis_data.wind['wind_spd_ave'] * KNOTS_TO_METER_PER_SECONDS, 3), {'units': 'm/s'}),
-                'wind_direction': (mitis_data.wind['wind_dir_ave'], {'corrections':'Corrected for magnetic declination at sampling.\n'}),
-                'wind_gust': (np.round(mitis_data.wind['wind_spd_max'] * KNOTS_TO_METER_PER_SECONDS, 3), {'units': 'm/s'}),
+                'wind_speed': (np.round(metis_data.wind['wind_spd_ave'] * KNOTS_TO_METER_PER_SECONDS, 3), {'units': 'm/s'}),
+                'wind_direction': (metis_data.wind['wind_dir_ave'], {'corrections': 'Corrected for magnetic declination at sampling.\n'}),
+                'wind_gust': (np.round(metis_data.wind['wind_spd_max'] * KNOTS_TO_METER_PER_SECONDS, 3), {'units': 'm/s'}),
             }
         )
 
         l.log('Wind Data Loaded')
 
-    if mitis_data.atms is not None:
+    if metis_data.atms is not None:
         data.update(
             {
-                'atm_temperature': (mitis_data.atms['air_temperature'], {"units": "degree_C"}),
-                'atm_humidity': (mitis_data.atms['air_humidity'], {"units": "percent"}),
-                'atm_pressure': (mitis_data.atms['air_pressure'], {"units": "mbar"}),
+                'atm_temperature': (metis_data.atms['air_temperature'], {"units": "degree_C"}),
+                'atm_humidity': (metis_data.atms['air_humidity'], {"units": "percent"}),
+                'atm_pressure': (metis_data.atms['air_pressure'], {"units": "mbar"}),
              }
         )
         l.log('Atmospheric Data Loaded')
 
-    if mitis_data.wave is not None:
+    if metis_data.wave is not None:
         data.update(
             {
-                'wave_mean_height': (mitis_data.wave['hm0'], {}), #CHECK IF THIS IS OK FIXME
-                'wave_maximal_height': (mitis_data.wave['hmax'], {}),
-                'wave_period': (mitis_data.wave['period'], {})
+                'wave_mean_height': (metis_data.wave['hm0'], {}), #CHECK IF THIS IS OK FIXME
+                'wave_maximal_height': (metis_data.wave['hmax'], {}),
+                'wave_period': (metis_data.wave['period'], {})
              }
         )
         l.log("Wave Data Loaded")
 
-    if mitis_data.adcp is not None:
+    if metis_data.adcp is not None:
         data.update(
             {
-                'u': (mitis_data.adcp['u'] * MILLIMETER_TO_METER, {"units": "m/s"}),
-                'v': (mitis_data.adcp['v'] * MILLIMETER_TO_METER, {"units": "m/s"}),
-                'w': (mitis_data.adcp['w'] * MILLIMETER_TO_METER, {"units": "m/s"}),
-                'e': (mitis_data.adcp['e'] * MILLIMETER_TO_METER, {"units": "m/s"}),
+                'u': (metis_data.adcp['u'] * MILLIMETER_TO_METER, {"units": "m/s"}),
+                'v': (metis_data.adcp['v'] * MILLIMETER_TO_METER, {"units": "m/s"}),
+                'w': (metis_data.adcp['w'] * MILLIMETER_TO_METER, {"units": "m/s"}),
+                'e': (metis_data.adcp['e'] * MILLIMETER_TO_METER, {"units": "m/s"}),
             }
         )
         l.log('ADCP Data Loaded')
 
 
-    if mitis_data.pco2 is not None:
+    if metis_data.pco2 is not None:
+        _pco2_air = metis_data.pco2['co2_ppm_air'] * metis_data.pco2['gas_pressure_air_mbar'] * MILLIBAR_TO_ATMOSPHERE
+        _pco2_water = metis_data.pco2['co2_ppm_water'] * metis_data.pco2['gas_pressure_water_mbar'] * MILLIBAR_TO_ATMOSPHERE
         data.update(
             {
-                'co2_air': (mitis_data.pco2['gas_pressure_air'] * mitis_data.pco2['co2_ppm_air'] / 1e6,
-                            {'units': 'uatm'}),
-                'co2_water': (mitis_data.pco2['gas_pressure_water'] * mitis_data.pco2['co2_ppm_water'] / 1e6,
-                              {'units': 'uatm'})
+                'pco2_air': (_pco2_air, {'units': 'uatm'}),
+                'pco2_water': (_pco2_water, {'units': 'uatm'})
              }
         )
         l.log('PCO2 Data Loaded')
@@ -421,20 +433,6 @@ def _add_time_coords(data: Dict[str, Tuple[np.ndarray, Dict]]) -> Dict[str, Tupl
     """Add the time coords according to the Xarray data format."""
     for var, (_data, _attrs) in data.items():
         data[var] = (['time'], _data, _attrs)
-
-
-def _fill_data(data: Dict[str, Tuple[np.ma.MaskedArray, dict]]) -> Dict[str, Tuple[List[str], np.ndarray, dict]]:
-    """
-    Fill the masked_array missing values with the predefined np.ma.MaskedArray filled value.
-
-    Should be np.nan or 'nan'.
-
-    See magtogoek.meteoce.viking_dat_reader.py for the filled value.
-    """
-    for var, (_data, _attrs) in data.items():
-        data[var] = (_data.filled(), _attrs)
-
-    l.log('Missing data filled.')
 
 
 def _average_duplicates(dataset: xr.Dataset, coord: str) -> xr.Dataset:
@@ -457,7 +455,5 @@ def _average_duplicates(dataset: xr.Dataset, coord: str) -> xr.Dataset:
 
 
 if __name__ == "__main__":
-    #filename = "/home/jeromejguay/ImlSpace/Projects/mitis-buoy-controller/tests/PMZA-RIKI_FileTAGS.dat"
-    #filename = "/home/jeromejguay/ImlSpace/Projects/magtogoek/tests/data/mitis_raw/PMZA-RIKI_FileTAGS.dat"
     filename = "/home/jeromejguay/ImlSpace/Data/pmza_2023/IML-4/PMZA-RIKI_FileTAGS_2023.dat"
-    ds = load_meteoce_data(filenames=filename, data_format='mitis')
+    ds = load_metoce_data(filenames=filename, data_format='metis')

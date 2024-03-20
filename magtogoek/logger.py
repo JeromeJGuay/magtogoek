@@ -79,6 +79,9 @@ class Logger:
     def w_count(self):
         return self._w_count
 
+    def append_to_logbook(self, logbook: str):
+        self._logbook += logbook
+
     def log(self, msg: tp.Union[str, tp.List[str]], t: bool = False):
         """Add a log.
         Parameters
@@ -148,6 +151,9 @@ def get_logger(logger_name=_root_logger):
         _loggers[logger_name] = Logger(logger_name, level=0)
     _manager.current_logger = logger_name
 
+
+def append_to_logbook(logbook: str):
+    _loggers[_manager.current_logger].append_to_logbook(logbook)
 
 def section(name: str, t=False):
     _loggers[_manager.current_logger].section(name, t)

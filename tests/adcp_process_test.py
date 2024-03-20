@@ -20,7 +20,7 @@ PROCESS_OUTPUT_FILES = [
 
 PLATFORM_FILE = "files/process_test/iml_platforms.json"
 RAW_ADCP_FILE = "data/raw_adcp_data/iml6_2017_wh.000"
-QUICK_OUTPUT_FILES = ["data/raw_adcp_data/iml6_2017_wh.nc"]
+QUICK_OUTPUT_FILES = ["data/raw_adcp_data/iml6_2017_wh.nc", "data/raw_adcp_data/iml6_2017_wh_raw.nc"]
 
 SENSOR_METADATA = {
     'sensor_type': 'adcp',

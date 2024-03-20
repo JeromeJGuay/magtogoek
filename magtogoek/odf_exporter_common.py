@@ -73,7 +73,7 @@ def make_cruise_header(odf: Odf, platform_metadata: PlatformMetadata, config_att
         odf.cruise["platform"] = "Oceanographic Buoy"
 
 
-def make_event_header(odf, dataset, config_attrs, event_qualifier2):
+def make_event_header(odf: Odf, dataset: xr.Dataset, config_attrs: dict, event_qualifier2: str):
     """
     Make the event header.
 
@@ -123,7 +123,7 @@ def _set_event_header_geospatials(odf: Odf, dataset: xr.Dataset):
         odf.event["end_longitude"] = dataset.attrs["longitude"]
 
 
-def make_odf_header(odf):
+def make_odf_header(odf: Odf):
     """
     Make field specification with:
     data_type, cruise_number, event_number, event_qualifier1, event_qualifier2
@@ -140,7 +140,7 @@ def make_odf_header(odf):
     odf.odf["file_specification"] = "_".join(name_part).strip("_").upper() + ".ODF"
 
 
-def make_instrument_header(odf, dataset):
+def make_instrument_header(odf: Odf, dataset: xr.Dataset):
     """
     inst_type
     model

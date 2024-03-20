@@ -29,7 +29,7 @@ def make_odf(
         global_attributes: dict,
         p01_codes_map: dict,
         use_bodc_name: bool = True,
-        event_qualifier2: str = 'VEL',
+        odf_dtype: str = 'VEL',
         output_path: Optional[str] = None
 ):
     """
@@ -48,7 +48,7 @@ def make_odf(
         generic name to bodc p01_code mapping.
     use_bodc_name:
         If True, map from the generic to the BODC p01 variables names.
-    event_qualifier2:
+    odf_dtype:
         Either `'VEL'` or `'ANC'`.
     output_path:
         If a path(str) is provided, there are two possibilities: if the path is only a directory, the file name
@@ -58,8 +58,8 @@ def make_odf(
     """
     odf = Odf()
 
-    make_cruise_header(odf, platform_metadata, global_attributes)
-    make_event_header(odf, dataset, global_attributes, event_qualifier2)
+    make_cruise_header(odf=odf, platform_metadata=platform_metadata, config_attrs=global_attributes)
+    make_event_header(odf=odf, dataset=dataset, config_attrs=global_attributes, event_qualifier2=odf_dtype)
     _set_event_header_depths(odf, dataset, p01_codes_map=p01_codes_map)
     make_odf_header(odf)
 
@@ -73,7 +73,7 @@ def make_odf(
     make_quality_header(odf, dataset)
     make_history_header(odf)
 
-    if event_qualifier2 == 'VEL':
+    if odf_dtype == 'VEL':
         if dataset.attrs['coord_system'] == 'beam':
             parameters = BEAM_PARAMETERS
         else:
@@ -95,7 +95,6 @@ def _make_adcp_buoy_instrument_header(
         adcp_id
         : str,
 ):
-    """TODO TEST"""
 
     if adcp_id not in odf.buoy_instrument:
         odf.add_buoy_instrument(adcp_id)

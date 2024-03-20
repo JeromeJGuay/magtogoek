@@ -20,7 +20,7 @@ The Buoy Data `.dat` files
     695 nm: Chlorophyll (ug/L from seabird)
     460 nm: FDOM (ppb from seabird)
     1 ppb = 1 mg / m³
-[Par_digi]: PAR (Photosynthetic Active Radiation): μmol photons•m-2•s-1,
+[Par_digi]: par (Photosynthetic Active Radiation): μmol photons•m-2•s-1,
     '110100,240521,SATPRS1093,30.415,510.646,-1.7,5.7,11.0,162'
 [SUNA]: Near surface Nitrate concentration
     'SATSLC1363,2021145,12.000192,7.63,0.1068,0.2978,0.2471,0.00,0.000160'
@@ -205,7 +205,7 @@ TAG_VARS = dict(
                   'wavelength_1', 'raw_value_1', 'calculated_value_1',
                   'wavelength_2', 'raw_value_2', 'calculated_value_2',
                   'wavelength_3', 'raw_value_3', 'calculated_value_3'],
-    PAR_DIGI_KEYS=['time', 'model_number', 'serial_number', 'timer_s', 'PAR', 'pitch', 'roll', 'intern_temperature'],
+    PAR_DIGI_KEYS=['time', 'model_number', 'serial_number', 'timer_s', 'par', 'pitch', 'roll', 'intern_temperature'],
     SUNA_KEYS=["time", "model_number", "serial_number", 'nitrate', 'nitrogen',
                'absorbance_254_31', 'absorbance_350_16', 'bromide', 'spectrum_average'],
     GPS_KEYS=['time', 'latitude_N', 'longitude_E', 'speed', 'course', 'variation_E', 'validity'],
@@ -294,7 +294,7 @@ class VikingData:
 
     def reformat(self):
         self._squeeze_empty_tag()
-        self._to_numpy_masked_array()
+        self._to_numpy_array()
 
         # Notes:
         if self.triplet is not None:  # This Could be done directly during the decoding
@@ -303,15 +303,15 @@ class VikingData:
         if self.wmt700 is not None:
            _set_wmt_fill_value_to_nan(self.wmt700)
 
-    def _to_numpy_masked_array(self):
+    def _to_numpy_array(self):
         self.time = np.array(self.time, dtype='datetime64[s]')
-        self.latitude = _to_numpy_masked_array(self.latitude)
-        self.longitude = _to_numpy_masked_array(self.longitude)
+        self.latitude = np.array(self.latitude)
+        self.longitude = np.array(self.longitude)
 
         for tag in self.tags:
             if self.__dict__[tag] is not None:
                 for key, value in self.__dict__[tag].items():
-                    self.__dict__[tag][key] = _to_numpy_masked_array(value)
+                    self.__dict__[tag][key] = np.array(value)
 
     def _squeeze_empty_tag(self):
         """Set tag where all data are missing to None"""
@@ -328,22 +328,6 @@ def _is_empty_tags(data: dict):
         elif len(unique_values) == 1 and np.isfinite(unique_values[0]):
             return False
     return True
-
-
-def _to_numpy_masked_array(data: list):
-    """
-    Putting the data: list into a numpy.array format to the right dtypes.
-    """
-    _data = np.array(data)
-    if isinstance(_data[0], str):
-        data_array = np.ma.masked_where(_data == str(NAN_FILL_VALUE), _data)
-    else:
-        data_array = np.ma.masked_where(_data == NAN_FILL_VALUE, _data)
-
-    data_array.set_fill_value(NAN_FILL_VALUE)
-
-    return data_array
-
 
 def _convert_triplet_wavelength(triplet_data: dict):
     """
@@ -663,7 +647,7 @@ def _decode_Par_digi(data: str, century: int) -> Optional[dict]:
             'model_number': model_number,
             'serial_number': serial_number,
             'timer_s': _safe_float(data[4]),
-            'PAR': _safe_float(data[4]),
+            'par': _safe_float(data[4]),
             'pitch': _safe_float(data[5]),
             'roll': _safe_float(data[6]),
             'intern_temperature': _safe_float(data[7]), }

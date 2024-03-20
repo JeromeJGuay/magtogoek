@@ -63,10 +63,14 @@ from datetime import datetime
 import matplotlib.colors as mcolors
 import matplotlib.widgets as mwidgets
 import matplotlib.backend_bases as mevent
+import matplotlib.pyplot as plt
 
 BLUE = mcolors.to_rgba('deepskyblue')
 GREEN = mcolors.to_rgba('lime')
 ORANGE = mcolors.to_rgba('orange')
+
+# FIXME pressing delete change colors
+# add command somewhere (as legend ?)
 
 def get_qc_colormap():
     cmap = mcolors.ListedColormap([
@@ -345,10 +349,39 @@ class QcPlot:
         self.fig.canvas.mpl_connect("key_press_event", point_selection_event)
 
 
-if __name__ == '__main__':
-    import xarray as xr
-    import matplotlib.pyplot as plt
 
+def manuel_qc_plots(filename: str, variable: str, save_path=None) -> None:
+
+    dataset = xr.load_dataset(filename)
+
+    if variable not in dataset:
+
+        # if the given variable is generic but the dataset in bodc
+        gen_to_bodc_map = {dataset[v].attrs['generic_name']: v for v in dataset.variables.keys()}
+        if variable in gen_to_bodc_map:
+            variable = gen_to_bodc_map[variable]
+        else:
+            # if the given variable is bodc but the dataset in generic
+            bodc_to_gen_map = {dataset[v].attrs['snd_parameter_urn'].split(":")[-1]: v for v in dataset.variables.keys()}
+            if variable in bodc_to_gen_map:
+                variable = bodc_to_gen_map[variable]
+
+    if 'ancillary_variables' in dataset[variable].attrs and dataset[variable].attrs['ancillary_variables'] in dataset:
+        if all(dataset[dataset[variable].attrs['ancillary_variables']].values == 0):
+            # check if variable is 1D
+            dataset[dataset[variable].attrs['ancillary_variables']].values[:] = 1
+        QcPlot(dataset=dataset, variable=variable).run()
+
+    if save_path is None:
+        #dataset = dataset.load()
+        #dataset.close()
+        dataset.to_netcdf(filename)
+    else:
+        dataset.to_netcdf(save_path)
+
+
+
+if __name__ == '__main__':
     plt.close('all')
 
     path = '/home/jeromejguay/ImlSpace/Data/pmza_2023/IML-4/iml4_meteoce_2023.nc'
@@ -369,11 +402,3 @@ if __name__ == '__main__':
     for var in ds.variables:
         if "_QC" not in var and 'ancillary_variables' in ds[var].attrs:
             QcPlot(dataset=ds, variable=var).run()
-
-
-
-    # Datast needsto be loaded (not open) to overwrite the current file.
-    # if path == save_path:
-    #     ds = ds.load()
-    #
-    # ds.to_netcdf(save_path)

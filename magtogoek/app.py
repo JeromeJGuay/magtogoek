@@ -174,6 +174,17 @@ def compute(info):
 def plot(info):
     """Command to make plot from nc data."""
 
+@_magtogoek.command("flagdata", context_settings=CONTEXT_SETTINGS)
+@add_options(common_options)
+@click.pass_context
+@click.argument("input_file", metavar="[input_files]", nargs=1, type=click.Path(exists=True), required=True)
+@click.argument("variable", metavar="[variable]", type=click.STRING, default=None, required=True)
+@click.argument("save_path", metavar="[save_path]", nargs=1, type=click.Path(dir_okay=True), required=False)
+def flag_data(ctx, info, input_file, variable, save_path):
+    """Command to flag data."""
+    # fixme add QC comments options ?
+    from magtogoek.misc.manual_quality_control import manuel_qc_plots
+    manuel_qc_plots(filename=input_file, variable=variable, save_path=save_path)
 
 # --------------------------- #
 #       config command        #
@@ -423,6 +434,7 @@ def plot_metoce(ctx, info, input_file, **options):
 
     except KeyError:
         print("Wrong format. The netcdf file is missing some attributes or doesn't have the expected variables name.")
+
 
 # ------------------------ #
 #        Functions         #

@@ -455,7 +455,7 @@ def parent_is_dir(path: str):
 def write_netcdf(dataset: xr.Dataset, pconfig: BaseProcessConfig):
     netcdf_path = Path(pconfig.netcdf_path).with_suffix('.nc')
     dataset.to_netcdf(netcdf_path)
-    l.log(f"netcdf file made -> {netcdf_path}")
+    print(f"netcdf file made -> {netcdf_path}")
 
 
 def netcdf_raw_exist(pconfig: BaseProcessConfig):
@@ -478,7 +478,7 @@ def write_netcdf_raw(dataset: xr.Dataset, pconfig: BaseProcessConfig):
 
     dataset.to_netcdf(netcdf_raw_path)
     dataset.close()
-    l.log(f"netcdf raw file made -> {netcdf_raw_path}")
+    print(f"netcdf raw file made -> {netcdf_raw_path}")
 
 
 def write_log(pconfig: BaseProcessConfig):

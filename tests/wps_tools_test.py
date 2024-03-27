@@ -15,7 +15,7 @@ def test_pHINT_from_voltINT():
     k0 = -1.438788
     k2 = -1.304895E-3
 
-    assert ph_int[0] == np.round(phINT_from_voltINT(temp=temp, volt=volt, k0=k0, k2=k2), 4)
+    assert ph_int[0] == np.round(phINT_from_voltINT(temperature=temp, volt=volt, k0=k0, k2=k2), 4)
 
 
 def test_pHEXT_from_voltEXT():
@@ -32,4 +32,4 @@ def test_pHEXT_from_voltEXT():
     k0 = -1.429278
     k2 = -1.142026E-3
 
-    assert ph_ext[0] == np.round(pHEXT_from_voltEXT(temp=temp, psal=psal, volt=volt, k0=k0, k2=k2)[0], 4)
+    assert ph_ext[0] == np.round(pHEXT_from_voltEXT(temperature=temp, psal=psal, volt=volt, k0=k0, k2=k2)[0], 4)

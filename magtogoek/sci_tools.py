@@ -325,3 +325,7 @@ def data_calibration_correction(data: np.ndarray, slope: float, offset: float) -
     """
 
     return slope * data + offset
+
+
+def celsius_to_kelvin(celsius: float) -> float:
+    return celsius + 273.15

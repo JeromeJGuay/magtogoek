@@ -210,39 +210,6 @@ def compute_navigation(
     return dataset
 
 
-# def _compute_navigation(dataset: xr.Dataset, window: int = None):
-#     """compute bearing, speed, u_ship and v_ship
-#
-#     Computes the distance between each GPS coordinates with Vincenty and
-#     WGS84 and speed = distance / time_delta.
-#
-#     Parameters
-#     ----------
-#     window :
-#         Size of the centered averaging window.
-#     """
-#     centered_time, course, speed = _compute_speed_and_course(dataset.time, dataset.lon.values, dataset.lat.values)
-#
-#     nav_dataset = xr.Dataset(
-#         {
-#             "course": (["time"], course),
-#             "speed": (["time"], speed)
-#         },
-#         coords={"time": centered_time},
-#     )
-#
-#     if window is not None:
-#         window = int(window)
-#         nav_dataset = nav_dataset.rolling(time=window, center=True).mean()
-#
-#     nav_dataset = nav_dataset.interp(time=dataset.time)
-#
-#     dataset['course'] = np.round(nav_dataset['course'], 2)
-#     dataset['speed'] = np.round(nav_dataset['speed'], 2)
-#
-#     dataset["u_ship"], dataset["v_ship"] = north_polar2cartesian(dataset.speed, dataset.course)
-
-
 def compute_speed_and_course(dataset: xr.Dataset, window: int = None):
     """Compute `speed` and `course` from `lon` and `lat`.
 
@@ -253,7 +220,7 @@ def compute_speed_and_course(dataset: xr.Dataset, window: int = None):
     window :
         Size of the centered averaging window.
     """
-    centered_time, course, speed = _compute_speed_and_course(dataset.time, dataset.lon.values, dataset.lat.values)
+    centered_time, course, speed = speed_course_from_lon_lat(dataset.time, dataset.lon.values, dataset.lat.values)
 
     nav_dataset = xr.Dataset(
         {
@@ -277,11 +244,15 @@ def compute_uv_ship(dataset: xr.Dataset):
     """Add `u_ship` and `v_ship` variables to dataset.
 
     Computes `u_ship` and `v_ship` from `speed` and `course`
+    Value rounded at 3 decimals.
+    Speed should be in m/s given mm/s precision.
     """
-    dataset["u_ship"], dataset["v_ship"] = north_polar2cartesian(dataset.speed, dataset.course)
+    u_ship, v_ship = north_polar2cartesian(dataset.speed, dataset.course)
+    dataset["u_ship"] = np.round(u_ship, 3)
+    dataset["v_ship"] = np.round(v_ship, 3)
 
 
-def _compute_speed_and_course(time: tp.Union[list, np.ndarray],
+def speed_course_from_lon_lat(time: tp.Union[list, np.ndarray],
                               longitude: tp.Union[list, np.ndarray],
                               latitude: tp.Union[list, np.ndarray]) -> tp.Tuple[np.ndarray, np.ndarray, np.ndarray]:
 

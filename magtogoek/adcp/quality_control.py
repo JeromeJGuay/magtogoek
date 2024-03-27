@@ -357,7 +357,7 @@ def flag_implausible_vel(
 
 
 def correlation_test(dataset: xr.Dataset, threshold: int):
-    """FIXME
+    """
     Value must be greater than the threshold to be good. (True fails)
     NOTE JeanLucShaw used absolute but is it needed ?"""
 
@@ -374,7 +374,7 @@ def correlation_test(dataset: xr.Dataset, threshold: int):
 
 
 def amplitude_test(dataset: xr.Dataset, threshold: int):
-    """FIXME
+    """
     Value must be greater than the threshold to be good. (True fails)
     NOTE JeanLucShaw used absolute but is it needed ?"""
     if all(f"amp{i}" in dataset for i in range(1, 5)):
@@ -390,7 +390,7 @@ def amplitude_test(dataset: xr.Dataset, threshold: int):
 
 
 def percentgood_test(dataset: xr.Dataset, threshold: int):
-    """FIXME
+    """
     Value must be greater than the threshold to be good. (True fails)
     NOTE JeanLucShaw used absolute but is it needed ?"""
     if "pg" in dataset:
@@ -401,7 +401,7 @@ def percentgood_test(dataset: xr.Dataset, threshold: int):
 
 
 def roll_test(dataset: xr.Dataset, threshold: float) -> tp.Type[np.array]:
-    """FIXME
+    """
     Roll conditions (True fails)
     Distance from mean"""
     if "roll_" in dataset:
@@ -414,7 +414,7 @@ def roll_test(dataset: xr.Dataset, threshold: float) -> tp.Type[np.array]:
 
 
 def pitch_test(dataset: xr.Dataset, threshold: float) -> tp.Type[np.array]:
-    """FIXME
+    """
     Pitch conditions (True fails)
     Distance from Mean
     """
@@ -429,7 +429,7 @@ def pitch_test(dataset: xr.Dataset, threshold: float) -> tp.Type[np.array]:
 
 
 def horizontal_vel_test(dataset: xr.Dataset, threshold: float) -> tp.Type[np.array]:
-    """FIXME
+    """
     None finite value value will also fail"""
 
     horizontal_velocity = np.sqrt(dataset.u ** 2 + dataset.v ** 2)
@@ -438,13 +438,13 @@ def horizontal_vel_test(dataset: xr.Dataset, threshold: float) -> tp.Type[np.arr
 
 
 def vertical_vel_test(dataset: xr.Dataset, threshold: float) -> tp.Type[np.array]:
-    """FIXME
+    """
     None finite value value will also fail"""
     return np.greater(abs(dataset.w.values), threshold)
 
 
 def error_vel_test(dataset: xr.Dataset, threshold: float) -> tp.Type[np.array]:
-    """FIXME
+    """
     None finite value value will also fail"""
     return np.greater(abs(dataset.e.values), threshold)
 
@@ -455,7 +455,7 @@ def vertical_beam_test(
     corr_threshold: float,
     pg_threshold: float,
 ) -> tp.Type[np.array]:
-    """FIXME"""
+
     vb_test = np.full(dataset.depth.shape + dataset.time.shape, False)
     if "vb_amp" in dataset.variables and amp_threshold:
         vb_test[dataset.vb_amp < amp_threshold] = True
@@ -469,7 +469,7 @@ def vertical_beam_test(
 
 def sidelobe_test(dataset: xr.Dataset, bottom_depth: float = None) -> tp.Union[tp.Tuple[np.ndarray, str],
                                                                                tp.Tuple[bool, None]]:
-    """FIXME
+    """
     Test for sidelobe contamination (True fails).
 
     Returns a boolean array or a False statement if the test cannot be carried out.
@@ -552,63 +552,3 @@ def pressure_test(dataset: xr.Dataset) -> np.ndarray:
         upper_limit=GLOBAL_IMPOSSIBLE_PARAMETERS['pres']['max']
         )
 
-
-# if __name__ == "__main__":
-#     import matplotlib.pyplot as plt
-#     from magtogoek.adcp.loader import load_adcp_binary
-#
-#     sillex_path = "/media/jeromejguay/5df6ae8c-2af4-4e5b-a1e0-a560a316bde3/home/jeromejguay/WorkSpace_2019/Data/Raw/ADCP/"
-#     sillex_fns = ["COR1805-ADCP-150kHz009_000001", "COR1805-ADCP-150kHz009_000002"]
-#
-#     v50_files = (
-#         "/media/jeromejguay/Bruno/TREX2020/V50/TREX2020_V50_20200911T121242_003_*.ENX"
-#     )
-#
-#     pd0_sw_path = "/home/jeromejguay/ImlSpace/Projects/magtogoek/test/files/sw_300_4beam_20deg_piston.pd0"
-#
-#     ens_sw_path = (
-#         "/home/jeromejguay/ImlSpace/Projects/magtogoek/test/files/rowetech_seawatch.ens"
-#     )
-#
-#     test = "SW_PD0"
-#
-#     if test == "SV":
-#         _dataset = load_adcp_binary(
-#             v50_files, sonar="sv", yearbase=2020, orientation="down",
-#         )
-#
-#     if test == "ENX":
-#         _dataset = load_adcp_binary(
-#             #            [sillex_path + fn + ".ENX" for fn in sillex_fns],
-#             sillex_path + "COR1805-ADCP-150kHz009.ENX",
-#             sonar="os",
-#             yearbase=2018,
-#             orientation="down",
-#         )
-#     if test == "SW_PD0":
-#         _dataset = load_adcp_binary(
-#             pd0_sw_path, sonar="sw_pd0", yearbase=2020, orientation="down"
-#         )
-#     if test == "ENS":
-#         _dataset = load_adcp_binary(
-#             ens_sw_path,
-#             sonar="sw",
-#             yearbase=2020,
-#             orientation="down",
-#             leading_index=None,
-#             trailing_index=None,
-#         )
-#
-#     adcp_quality_control(
-#         _dataset,
-#         roll_th=20,
-#         pitch_th=20,
-#         horizontal_vel_th=2,
-#         vertical_vel_th=0.1,
-#         sidelobes_correction=True,
-#         bottom_depth=None,
-#     )
-#
-#     _dataset.u.where(_dataset.u_QC == 1).plot()
-#
-#     plt.show()

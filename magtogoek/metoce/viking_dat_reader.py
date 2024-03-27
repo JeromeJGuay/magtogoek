@@ -850,11 +850,11 @@ def _decode_CO2_W(data: str) -> Optional[dict]:
     return {"time": _make_timestamp(*data[1:7]),
             "auto_zero": _safe_float(data[7]),
             "current": _safe_float(data[8]),
-            "co2_ppm": _safe_float(data[8]),
-            "irga_temperature": _safe_float(data[9]),
-            "humidity_mbar": _safe_float(data[10]),
-            "humidity_sensor_temperature": _safe_float(data[11]),
-            "cell_gas_pressure_mbar": _safe_float(data[12])}
+            "co2_ppm": _safe_float(data[9]),
+            "irga_temperature": _safe_float(data[10]),
+            "humidity_mbar": _safe_float(data[11]),
+            "humidity_sensor_temperature": _safe_float(data[12]),
+            "cell_gas_pressure_mbar": _safe_float(data[13])}
 
 
 def _decode_CO2_A(data: str) -> Optional[dict]:
@@ -864,11 +864,11 @@ def _decode_CO2_A(data: str) -> Optional[dict]:
     return {'time': _make_timestamp(*data[1:7]),
             'auto_zero': _safe_float(data[7]),
             'current': _safe_float(data[8]),
-            "co2_ppm": _safe_float(data[8]),
-            'irga_temperature': _safe_float(data[9]),
-            'humidity_mbar': _safe_float(data[10]),
-            'humidity_sensor_temperature': _safe_float(data[11]),
-            "cell_gas_pressure_mbar": _safe_float(data[12])}
+            "co2_ppm": _safe_float(data[9]),
+            'irga_temperature': _safe_float(data[10]),
+            'humidity_mbar': _safe_float(data[11]),
+            'humidity_sensor_temperature': _safe_float(data[12]),
+            "cell_gas_pressure_mbar": _safe_float(data[13])}
 
 
 def _decode_Debit(data: str) -> dict:

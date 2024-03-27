@@ -332,10 +332,9 @@ def load_adcp_binary(
     # QUALITY
     if "pg" in data:
         if data.trans["coordsystem"] == "beam":
-            dataset["pg"] = (["depth", "time"], np.asarray(np.mean(data.pg, axis=2).T))
-            l.log(
-                "Percent good was computed by averaging each beam PercentGood. The raw data were in beam coordinates."
-            )
+            for i in range(4):
+                dataset[f'pg{i+1}'] = (["depth", "time"], data.pg[:, :, i].T)
+            l.log("Beams Percent Good data were loaded.")
         else:
             dataset["pg"] = (["depth", "time"], np.asarray(data.pg4.T))
         l.log('PercentGood data loaded.')

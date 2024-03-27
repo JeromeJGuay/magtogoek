@@ -429,7 +429,7 @@ def plot_metoce(ctx, info, input_file, **options):
                 raw_dataset = xr.open_dataset(raw_data_path).sel(time=slice(dataset.time[0], dataset.time[-1]))
             else:
                 print(f"Raw data file not found ({raw_dataset}).")
-        make_metoce_figure(dataset, variables_groupes=options['vars'], save_path=options['save_fig'],
+        make_metoce_figure(dataset, variables_groupes=options['vars'] or None, save_path=options['save_fig'],
                            show_fig=not options['headless'], dataset_raw=raw_dataset)
 
     except KeyError:

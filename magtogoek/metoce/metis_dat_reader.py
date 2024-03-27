@@ -30,7 +30,7 @@ Tag Structure:
 [ATMS]Air_Temp,Air_Humidity,Air_Pressure,PAR,Rain_Total,Rain_Duration,Rain_Intensity
 [WAVE]Wave_Date,Wave_Time,Wave_Period,Wave_Hm0,Wave_H13,Wave_Hmax
 [ADCP]ADCPDate,ADCPTime,EW,NS,Vert,Err
-[PCO2]CO2_PPM_Air,CO2_PPM_Water,Pressure_Air,Pressure_Water,Air_Humidity
+[PCO2]CO2_PPM_Air,CO2_PPM_Water
 [WNCH]messages
     messages:
         Air temperature is too low
@@ -67,7 +67,7 @@ DAT_FILE_DATA_STRUCTURE = {
     'atms': ['air_temperature', 'air_humidity', 'air_pressure', 'par', 'rain_total', 'rain_duration', 'rain_intensity'],
     'wave': ['date', 'time', 'period', 'hm0', 'h13', 'hmax'],
     'adcp': ['date', 'time', 'u', 'v', 'w', 'e'],
-    'pco2': ['co2_ppm_air', 'co2_ppm_water', 'gas_pressure_air_mbar', 'gas_pressure_water_mbar', 'air_humidity'],
+    'pco2': ['co2_ppm_air', 'co2_ppm_water'],
     'wnch': ['message']
 }
 
@@ -88,7 +88,7 @@ METIS_VARIABLES = {
     'atms': ['air_temperature', 'air_humidity', 'air_pressure', 'par', 'rain_total', 'rain_duration', 'rain_intensity'],
     'wave': ['time', 'period', 'hm0', 'h13', 'hmax'],
     'adcp': ['time', 'u', 'v', 'w', 'e'],
-    'pco2': ['co2_ppm_air', 'co2_ppm_water', 'gas_pressure_air_mbar', 'gas_pressure_water_mbar', 'air_humidity'],
+    'pco2': ['co2_ppm_air', 'co2_ppm_water'],
     'wnch': ['message']
 }
 
@@ -104,7 +104,7 @@ METIS_FLOAT_VARIABLES = {
     'atms': ['air_temperature', 'air_humidity', 'air_pressure', 'par', 'rain_total', 'rain_duration', 'rain_intensity'],
     'wave': ['period', 'hm0', 'h13', 'hmax'],
     'adcp': ['u', 'v', 'w', 'e'],
-    'pco2': ['co2_ppm_air', 'co2_ppm_water', 'gas_pressure_air_mbar', 'gas_pressure_water_mbar', 'air_humidity'],
+    'pco2': ['co2_ppm_air', 'co2_ppm_water'],
     'wnch': []
 }
 
@@ -227,9 +227,9 @@ class RawMetisDatReader:
 
         buoy_names = set([_d['init']['buoy_name'] for _d in unpacked_data])
 
-        for key in buoy_names:
-            self._buoys_data[key] = MetisData(buoy_name=key)
-            self.__setattr__(key, self._buoys_data[key])
+        for _name in buoy_names:
+            self._buoys_data[_name] = MetisData(buoy_name=_name)
+            self.__setattr__(_name, self._buoys_data[_name])
 
         _ensemble_count = 0
         _number_of_ensemble = len(unpacked_data)
@@ -238,23 +238,38 @@ class RawMetisDatReader:
             buoy_data = self._buoys_data[_data['init']['buoy_name']]
             buoy_data.time.append(_data['init']['time'])
 
-            for tag in METIS_VARIABLES:
-                if tag in _data:
-                    for key in _data[tag]:
-                        buoy_data.__dict__[tag][key].append(_data[tag][key])
-                else:
-                    for key in METIS_VARIABLES[tag]:
-                        if key == "time":
-                            buoy_data.__dict__[tag][key].append(NAT_FILL_VALUE)
-                        else:
-                            buoy_data.__dict__[tag][key].append(NAN_FILL_VALUE)
+            _add_tag_data_to_buoy(buoy_data=buoy_data, data_dict=_data)
 
             _ensemble_count += 1
+
         print(f'Data Ensemble loaded: {_ensemble_count}/{_number_of_ensemble}', end='\r')
+        print('') # to go to the next line since the previous one had `\r`
 
         for metis_data in self._buoys_data.values():
             metis_data.drop_empty_tag()
             metis_data.to_numpy_array()
+
+
+def _add_tag_data_to_buoy(buoy_data: MetisData, data_dict: Dict[str, Dict[str, str]]):
+    for tag in METIS_VARIABLES:
+        if tag in data_dict:
+            for variable, value in data_dict[tag].items():
+                if variable in METIS_FLOAT_VARIABLES[tag]:
+                    value = _safe_float(value)
+                buoy_data.__dict__[tag][variable].append(value)
+        else:
+            for variable in METIS_VARIABLES[tag]:
+                if variable == "time":
+                    buoy_data.__dict__[tag][variable].append(NAT_FILL_VALUE)
+                else:
+                    buoy_data.__dict__[tag][variable].append(NAN_FILL_VALUE)
+
+
+def _safe_float(value: str) -> float:
+    try:
+        return float(value)
+    except ValueError:
+        return NAN_FILL_VALUE
 
 def _unpack_data_from_tag_string(data: str) -> Dict[str, Dict[str, str]]:
     """Unpack Metis Tag Data
@@ -283,8 +298,8 @@ def _unpack_data_from_tag_string(data: str) -> Dict[str, Dict[str, str]]:
 
 def _make_timestamp(date: str, time: str) -> str:
     _time = f'{date}T{time}'
-    if "NA" in _time: # Fixme maybe remove after fixing 2023 dat?
-        return "NaT"                    # Fixme maybe remove after fixing 2023 dat?
+    if "NA" in _time:
+        return "NaT"
     return _time
 
 def _degree_minute_to_degree_decimal(value: str) -> float:

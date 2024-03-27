@@ -434,4 +434,4 @@ def write_odf(odf: Odf, output_path: Optional[str] = None):
 
     output_path = str(Path(output_path).with_suffix(".ODF"))
     odf.write(output_path)
-    l.log(f"odf {odf.event['event_qualifier2'].upper()} file made -> {output_path}")
+    print(f"odf {odf.event['event_qualifier2'].upper()} file made -> {output_path}")

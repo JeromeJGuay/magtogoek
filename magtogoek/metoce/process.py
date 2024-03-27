@@ -30,7 +30,8 @@ import numpy as np
 import xarray as xr
 
 from magtogoek import logger as l
-from magtogoek.navigation import compute_speed_and_course, compute_uv_ship
+from magtogoek.metoce.computation import compute_buoy_speed_and_course, compute_buoy_u_ship_and_v_ship, compute_potential_density, \
+    compute_air_and_water_pco2
 
 from magtogoek.tools import cut_index, cut_times
 from magtogoek.process_common import BaseProcessConfig, resolve_output_paths, add_global_attributes, write_log, \
@@ -40,11 +41,8 @@ from magtogoek.process_common import BaseProcessConfig, resolve_output_paths, ad
 from magtogoek.attributes_formatter import format_variables_names_and_attributes
 from magtogoek.platforms import PlatformMetadata
 
-from magtogoek.wps.sci_tools import dissolved_oxygen_ml_per_L_to_umol_per_L, dissolved_oxygen_umol_per_L_to_umol_per_kg
-
 from magtogoek.metoce.loader import load_metoce_data
-from magtogoek.metoce.correction import apply_sensors_corrections, apply_magnetic_correction, apply_motion_correction, \
-    compute_ctd_potential_density
+from magtogoek.metoce.correction import apply_sensors_corrections, apply_magnetic_correction, apply_motion_correction
 from magtogoek.metoce.quality_control import metoce_quality_control, no_metoce_quality_control
 from magtogoek.metoce.plots import make_metoce_figure
 from magtogoek.metoce.odf_exporter import make_odf
@@ -55,9 +53,14 @@ l.get_logger("metoce_processing")
 
 STANDARD_GLOBAL_ATTRIBUTES = {"featureType": "timeSeriesProfile"}
 
-VARIABLES_TO_DROP = ['ph_temperature']
+VARIABLES_TO_DROP = [
+    'ph_temperature',
+    'xco2_air',
+    'xco2_water'
+]
+
 # The following variables can be added to the VARIABLES_TO_DROP list during processing.
-# 'pres', 'raw_dissolved_oxygen' 'magnetic_declination'
+# 'raw_dissolved_oxygen' 'magnetic_declination'
 
 GLOBAL_ATTRS_TO_DROP = []
 
@@ -273,7 +276,7 @@ class ProcessConfig(BaseProcessConfig):
 
     # Processing Flag
     ph_is_corrected: bool = False
-
+    dissolved_oxygen_is_corrected_for_salinity: bool = False
 
     def __init__(self, config_dict: dict = None):
         super().__init__(config_dict)
@@ -353,17 +356,19 @@ def _process_metoce_data(pconfig: ProcessConfig):
         l.log(f"Loading the following navigation data from {pconfig.navigation_file}")
         add_navigation(dataset, pconfig.navigation_file)
 
-    l.section('Navigation data computation')
+    # ----------------------------------- #
+    #  METOCE COMPUTATION AND CORRECTION  #
+    # ----------------------------------- #
+
+    l.section("Metoce data computation and correction")
+
     if pconfig.recompute_speed_course is True:
-        _recompute_speed_course(dataset=dataset)
+        compute_buoy_speed_and_course(dataset=dataset)
+
     if pconfig.compute_uv_ship is True:
-        _compute_uv_ship(dataset=dataset)
+        compute_buoy_u_ship_and_v_ship(dataset=dataset)
 
-    # ------------------- #
-    # METOCE CORRECTION  #
-    # ------------------- #
-
-    l.section("Metoce data correction")
+    compute_air_and_water_pco2(dataset=dataset)
 
     apply_magnetic_correction(dataset, pconfig)
 
@@ -371,14 +376,8 @@ def _process_metoce_data(pconfig: ProcessConfig):
 
     apply_sensors_corrections(dataset, pconfig)
 
-    # --------------- #
-    # METOCE COMPUTE #
-    # --------------- #
-
-    l.section("Metoce data computation.")
-
     if 'density' not in dataset or pconfig.recompute_density is True:
-        compute_ctd_potential_density(dataset, pconfig)
+        compute_potential_density(dataset, pconfig)
 
     # --------------- #
     # QUALITY CONTROL #
@@ -554,33 +553,6 @@ def _adcp_quality_control(dataset: xr.Dataset, pconfig: ProcessConfig):
         dataset[var] = adcp_dataset[var].squeeze(['depth'], drop=True)
 
 
-def _dissolved_oxygen_ml_per_L_to_umol_per_L(dataset: xr.Dataset):
-    """
-    """
-    if dataset.dissolved_oxygen.attrs['units'] == ['ml/L']:
-        dataset.dissolved_oxygen.values = dissolved_oxygen_ml_per_L_to_umol_per_L(dataset.dissolved_oxygen)
-        dataset.dissolved_oxygen.attrs['units'] = 'umol/L'
-        l.log('Dissolved Oxygen converted from [ml/L] to [umol/L].')
-    else:
-        l.warning(
-            f"Wrong dissolved oxygen units {dataset.dissolved_oxygen.attrs['units']} for conversion from [ml/L] to [umol/L].")
-
-
-def _dissolved_oxygen_umol_per_L_to_umol_per_kg(dataset: xr.Dataset):
-    if dataset.dissolved_oxygen.attrs['units'] == ['umol/L']:
-        if 'density' in dataset.variables:
-            dataset.dissolved_oxygen.values = dissolved_oxygen_umol_per_L_to_umol_per_kg(
-                dataset.dissolved_oxygen.dataset.density
-            )
-            dataset.dissolved_oxygen.attrs['units'] = 'umol/kg'
-            l.log('Dissolved Oxygen converted from [umol/L] to [umol/kg].')
-        else:
-            l.warning(f"Density missing for oxygen conversion from [umol/L] to [umol/kg].")
-    else:
-        l.warning(
-            f"Wrong dissolved oxygen units {dataset.dissolved_oxygen.attrs['units']} for conversion from [umol/L] to [umol/kg].")
-
-
 def _add_platform_instrument_metadata_to_dataset(dataset: xr.Dataset, pconfig: ProcessConfig):
     if pconfig.platform_metadata is not None:
         for sensor, instrument_id in pconfig.sensors_to_instrument_id.items():
@@ -660,29 +632,3 @@ def _write_odf(dataset: xr.Dataset, pconfig: ProcessConfig):
         use_bodc_name=pconfig.use_bodc_name,
         output_path=pconfig.odf_path,
     )
-
-
-def _recompute_speed_course(dataset: xr.Dataset):
-    if all(v in dataset for v in ['lon', 'lat']):
-        l.log('Platform `speed` and `course` computed from longitude and latitude data.')
-        compute_speed_and_course(dataset=dataset)
-    else:
-        l.warning("Could not compute `speed` and `course`. `lon`/`lat` data not found.")
-
-
-def _compute_uv_ship(dataset: xr.Dataset):
-    if all(x in dataset for x in ('speed', 'course')):
-        l.log('Platform `u_ship`, `v_ship` computed from speed and course data.')
-        compute_uv_ship(dataset=dataset)
-        dataset["u_ship"] = np.round(dataset["u_ship"], 2)
-        dataset["v_ship"] = np.round(dataset["v_ship"], 2)
-
-    elif all(v in dataset for v in ['lon', 'lat']):
-        l.log('Platform velocities (u_ship, v_ship) computed from longitude and latitude data.')
-        compute_speed_and_course(dataset=dataset)
-        compute_uv_ship(dataset=dataset)
-        dataset["u_ship"] = np.round(dataset["u_ship"], 2)
-        dataset["v_ship"] = np.round(dataset["v_ship"], 2)
-
-    else:
-        l.warning("Could not compute `u_ship` and `v_ship`. GPS data not found.")

@@ -230,7 +230,7 @@ def data_spike_detection_tests(dataset: xr.Dataset, variable: str, threshold: fl
     test_comment = \
         f"Spike detection threshold {threshold} {dataset[variable].attrs['units']} (flag=3)"
 
-    l.log(f"{variable} :" + test_comment)
+    l.log(f"{variable}: " + test_comment)
     dataset[variable+"_QC"].attrs['quality_test'] += test_comment + "\n"
 
 

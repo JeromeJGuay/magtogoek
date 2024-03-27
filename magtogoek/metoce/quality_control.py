@@ -45,36 +45,56 @@ SPIKE_QC_VARIABLES = [
 ]
 
 
-VARIABLES_WITH_QC = { # 1: QC(default flag = 1) , 0: No Qc (default flag = 0)
-    "wind_speed":0,
-    "wind_direction":0,
-    "wind_gust":0,
-    "wind_gust_direction":0,
-    'atm_temperature': 1,
-    'atm_humidity': 1,
-    'atm_pressure': 1,
-    'wave_mean_height': 0,
-    'wave_maximal_height': 0,
-    'wave_period': 0,
-    'wave_direction': 0,
-    'temperature': 1,
-    'conductivity': 0,
-    'salinity': 1,
-    'density': 1,
-    'dissolved_oxygen': 1,
-    'ph': 1,
-    'par': 0,
-    'scattering': 1,
-    'chlorophyll': 1,
-    'fdom': 1,
-    'pco2_air': 0,
-    'pco2_water': 0
-    }
+# VARIABLES_WITH_QC = { # 1: QC(default flag = 1) , 0: No Qc (default flag = 0)
+#     "wind_speed":0,
+#     # "wind_direction":0,
+#     "wind_gust":0,
+#     # "wind_gust_direction":0,
+#     'atm_temperature': 1,
+#     'atm_humidity': 1,
+#     'atm_pressure': 1,
+#     'wave_mean_height': 0,
+#     'wave_maximal_height': 0,
+#     # 'wave_period': 0,
+#     # 'wave_direction': 0,
+#     'temperature': 1,
+#     'conductivity': 0,
+#     'salinity': 1,
+#     'density': 1,
+#     'dissolved_oxygen': 1,
+#     'ph': 1,
+#     'par': 0,
+#     'scattering': 1,
+#     'chlorophyll': 1,
+#     'fdom': 1,
+#     'pco2_air': 0,
+#     'pco2_water': 0
+#     }
+# QC_VARIABLES = [k for k, v in VARIABLES_WITH_QC.items() if v == 1]
+# NO_QC_VARIABLES = [k for k, v in VARIABLES_WITH_QC.items() if v == 0]
 
-QC_VARIABLES = [k for k, v in VARIABLES_WITH_QC.items() if v == 1]
 
-
-NO_QC_VARIABLES = [k for k, v in VARIABLES_WITH_QC.items() if v == 0]
+VARIABLES_WITH_QC = [
+    "wind_speed",
+    "wind_gust",
+    'atm_temperature',
+    'atm_humidity',
+    'atm_pressure',
+    'wave_mean_height',
+    'wave_maximal_height',
+    'temperature',
+    'conductivity',
+    'salinity',
+    'density',
+    'dissolved_oxygen',
+    'ph',
+    'par',
+    'scattering',
+    'chlorophyll',
+    'fdom',
+    'pco2_air',
+    'pco2_water',
+]
 
 
 def no_metoce_quality_control(dataset: xr.Dataset):
@@ -97,8 +117,8 @@ def no_metoce_quality_control(dataset: xr.Dataset):
 def metoce_quality_control(dataset: xr.Dataset, pconfig: "ProcessConfig"):
     l.section("Metoce Quality Control")
 
-    _add_ancillary_variables_to_dataset(dataset, variables=QC_VARIABLES, default_flag=1)
-    _add_ancillary_variables_to_dataset(dataset, variables=NO_QC_VARIABLES, default_flag=0)
+    # QC variables with possible quality test are all set to 1, and QC attributes added.
+    _add_ancillary_variables_to_dataset(dataset, variables=VARIABLES_WITH_QC, default_flag=1)
 
     if pconfig.regional_outlier is not None:
         if pconfig.regional_outlier in IMPOSSIBLE_PARAMETERS_VALUES:
@@ -109,10 +129,16 @@ def metoce_quality_control(dataset: xr.Dataset, pconfig: "ProcessConfig"):
     if pconfig.absolute_outlier is True:
         _impossible_values_tests(dataset, region='global', flag=4)
 
-
     _spike_detection_tests(dataset, pconfig=pconfig)
 
     _flag_missing_values(dataset)
+
+    # If no quality test was carried out on a variable, QC values that were set to 1 are set to 0.
+    # Missing values flag (9) are not changed.
+    # This need to be done before flag propagation.
+    for _variable in set(VARIABLES_WITH_QC) & set(dataset.variables.keys()):
+        if dataset[_variable + "_QC"].attrs['quality_test'] == "":
+            dataset[_variable + "_QC"].values[dataset[_variable + "_QC"].values == 1] = 0
 
     if pconfig.propagate_flags is True:
         _propagate_flag(dataset, pconfig=pconfig)
@@ -134,7 +160,7 @@ def _impossible_values_tests(dataset: xr.Dataset, region: str, flag: int):
     """
     outliers_values = IMPOSSIBLE_PARAMETERS_VALUES[region]
 
-    for variable in set(dataset.keys()) & set(outliers_values.keys()) & set(QC_VARIABLES):
+    for variable in set(dataset.keys()) & set(outliers_values.keys()) & set(VARIABLES_WITH_QC):
         _data = dataset[variable].values
 
         if 'units' in dataset[variable].attrs:
@@ -168,7 +194,7 @@ def _spike_detection_tests(dataset: xr.Dataset, pconfig: "ProcessConfig"):
             'window': pconfig.__getattribute__(var + "_spike_window")}
         for var in SPIKE_QC_VARIABLES
     }
-    for var in set(dataset.keys()) & set(spike_tests.keys()):
+    for var in set(dataset.variables.keys()) & set(spike_tests):
         if spike_tests[var]['threshold'] is not None:
             data_spike_detection_tests(
                 dataset=dataset,
@@ -180,41 +206,52 @@ def _spike_detection_tests(dataset: xr.Dataset, pconfig: "ProcessConfig"):
 
 def _flag_missing_values(dataset: xr.Dataset):
     """Flag missing values for all metoce variables."""
-    for variable in set(dataset.keys()).intersection(set(VARIABLES_WITH_QC.keys())):
+    for variable in set(dataset.variables.keys()) & set(VARIABLES_WITH_QC):
         add_flags_values(dataset[variable + "_QC"].data, find_missing_values(dataset[variable].values) * 9)
 
 
 def _propagate_flag(dataset: xr.Dataset, pconfig: "ProcessConfig"):
     """
+
     Propagation Rules
     -----------------
-        Pressure -> Depth
-        Depth, Temperature, Salinity -> Density
-        Pressure, Temperature, Salinity -> Dissolved Oxygen
-        Temperature, Salinity -> pH
+        + Depth, Temperature, Salinity -> Density
+        + Pressure, Temperature, Salinity -> Dissolved Oxygen
+        + Temperature, Salinity -> pH
+        + Atmospheric Pressure -> pco2 air
+        + Atmospheric Pressure -> pco2 water
 
-    Parameters
-    ----------
-    dataset
+    Notes
+    -----
+        Flag propagation (using the highest values) works since flags values of 5 to 8 are
+        not used in the quality control.
 
     """
 
     flag_propagation_rules = {
         'density_QC': ['temperature_QC', 'salinity_QC', 'density_QC'],
-        'dissolved_oxygen_QC': ['temperature_QC', 'salinity_QC', 'dissolved_oxygen_QC'],
+        'pco2_air_QC': ['atm_pressure_QC', 'pco2_air_QC'],
+        'pco2_water_QC': ['atm_pressure_QC', 'pco2_water_QC'],
         }
+
+    if pconfig.dissolved_oxygen_is_corrected_for_salinity is True:
+        flag_propagation_rules['dissolved_oxygen_QC'] = ['temperature_QC', 'salinity_QC', 'dissolved_oxygen_QC']
 
     if pconfig.ph_is_corrected is True:
         flag_propagation_rules['ph_QC'] = ['temperature_QC', 'salinity_QC', 'ph_QC']
 
 
-    for variable in set(dataset.keys()) & set(flag_propagation_rules.keys()):
+    for variable in set(dataset.variables.keys()) & set(flag_propagation_rules.keys()):
 
-        qc_variables = [dataset[_var].data for _var in set(flag_propagation_rules[variable]) & set(dataset.variables)]
+        qc_dataarray_list = [dataset[_var].data for _var in set(flag_propagation_rules[variable]) & set(dataset.variables)]
+        new_qc_values = merge_flags(flags_arrays=qc_dataarray_list)
 
-        dataset[variable].data = merge_flags(flags_arrays=qc_variables)
+        # 0 (no QC) flag value should only be changed to flag value 3 (probably bad) or more (4, 9).
+        new_qc_values[(new_qc_values <= 2) & (dataset[variable].values == 0)] = 0
 
-        propagation_comment = f'Flags propagation {flag_propagation_rules[variable]} -> {variable}.'
+        dataset[variable].data = new_qc_values
+
+        propagation_comment = f'Flags propagation: {flag_propagation_rules[variable]} -> {variable}.'
 
         l.log(propagation_comment)
 
@@ -223,7 +260,7 @@ def _propagate_flag(dataset: xr.Dataset, pconfig: "ProcessConfig"):
 
 def _print_percent_of_good_values(dataset: xr.Dataset):
     """Only check for variables in QC_VARIABLES"""
-    for variable in set(dataset.keys()).intersection(set(QC_VARIABLES)):
+    for variable in set(dataset.keys()).intersection(set(VARIABLES_WITH_QC)):
         if "_QC" in variable:
             percent_of_good_values = np.sum(dataset[variable + "_QC"] <= 2) / len(dataset.time)
-            l.log(f"{round(percent_of_good_values * 100, 2)}% of {variable.strip('_QC')} have flags of 1 or 2.")
+            l.log(f"{round(percent_of_good_values * 100, 2)}% of {variable.strip('_QC')} have flags of 0, 1 or 2.")

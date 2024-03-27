@@ -77,20 +77,24 @@ def apply_magnetic_correction(dataset: xr.Dataset, magnetic_declination: float):
 
     magnetic_correction = _compute_relative_magnetic_declination(dataset, magnetic_declination)
 
-    dataset.u.values, dataset.v.values = xy_vector_magnetic_correction(dataset.u, dataset.v, magnetic_correction)
-    l.log(f"Velocities transformed to true north and true east.")
-    for v in ["u", "v"]:
-        add_correction_attributes_to_dataarray(dataset[v])
-        dataset[v].attrs['corrections'] += "Velocities transformed to true north and true east.\n"
-
-    if all(v in dataset for v in ["bt_u", "bt_v"]):
-        dataset.bt_u.values, dataset.bt_v.values = xy_vector_magnetic_correction(
-            dataset.bt_u, dataset.bt_v, magnetic_correction
-        )
-        l.log(f"Bottom velocities transformed to true north and true east.")
-        for v in ["bt_u", "bt_v"]:
+    if dataset.attrs['coord_system'] == 'earth':
+        dataset.u.values, dataset.v.values = xy_vector_magnetic_correction(dataset.u, dataset.v, magnetic_correction)
+        l.log(f"Velocities transformed to true north and true east.")
+        for v in ["u", "v"]:
             add_correction_attributes_to_dataarray(dataset[v])
-            dataset[v].attrs['corrections'] += "Bottom velocities transformed to true north and true east.\n"
+            dataset[v].attrs['corrections'] += "Velocities transformed to true north and true east.\n"
+
+        if all(v in dataset for v in ["bt_u", "bt_v"]):
+            dataset.bt_u.values, dataset.bt_v.values = xy_vector_magnetic_correction(
+                dataset.bt_u, dataset.bt_v, magnetic_correction
+            )
+            l.log(f"Bottom velocities transformed to true north and true east.")
+            for v in ["bt_u", "bt_v"]:
+                add_correction_attributes_to_dataarray(dataset[v])
+                dataset[v].attrs['corrections'] += "Bottom velocities transformed to true north and true east.\n"
+    else:
+        l.warning('Velocities correction for magnetic declination was not carried out since '
+                  'they are not in earth coordinates.')
 
     # heading goes from -180 to 180
     if "heading" in dataset:

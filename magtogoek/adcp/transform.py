@@ -48,10 +48,15 @@ def coordsystem2earth(dataset: xr.Dataset) -> xr.Dataset:
 
     if dataset.attrs['coord_system'] == "beam" and dataset.attrs['beam_angle'] is not None:
         dataset = beam2xyze(dataset)
+        dataset = percent_good_beam2xyz(dataset=dataset)
 
     if dataset.attrs['coord_system'] == 'xyz':
         if 'heading' in dataset and 'roll_' in dataset and 'pitch' in dataset:
-            if any([(dataset['heading'] == 0).all(), (dataset['roll_'] == 0).all(), (dataset['pitch'] == 0).all()]):
+            if any([
+                (dataset['heading'].values == 0).all(),
+                (dataset['roll_'].values == 0).all(),
+                (dataset['pitch'].values == 0).all()
+            ]):
                 l.warning(
                     "One or more of Pitch, Roll and Heading values are all 0.")
             xyz2enu(dataset)
@@ -98,10 +103,20 @@ def beam2xyze(dataset: xr.Dataset) -> xr.Dataset:
         for i, v in enumerate(bt_xyze_velocities):
             dataset[v] = (["time"], np.round(trans_vel[:, i].T, decimals=3))
         l.log('Bottom velocities transformed from beam to xyz coordinates.')
-        dataset.drop_vars(bt_beam_velocities)
+        dataset = dataset.drop_vars(bt_beam_velocities)
 
     dataset.attrs['coord_system'] = "xyz"
 
+    return dataset
+
+
+def percent_good_beam2xyz(dataset: xr.Dataset) -> xr.Dataset:
+    """Compute the Percent Good as the average of each beam Percent Good"""
+    _beam_pg_good = [f'pg{i + 1}' for i in range(4)]
+    _pg_good = np.mean([dataset[v].values for v in _beam_pg_good], axis=0)
+    dataset['pg'] = (["depth", "time"], np.round(_pg_good, decimals=0))
+    l.warning("Percent Good was computed as the averaged of the Beams Percent Good.")
+    dataset = dataset.drop_vars(_beam_pg_good)
     return dataset
 
 
@@ -187,25 +202,4 @@ def xyz2enu(dataset: xr.Dataset):
         l.log('Bottom velocities transformed from xyze to earth coordinates.')
 
     dataset.attrs['coord_system'] = "earth"
-
-
-def _xyz2enu(dataset: xr.Dataset, velocities: Tuple[str]):
-    """See xyze2enu
-    """
-
-
-if __name__ == "__main__":
-    # import matplotlib.pyplot as plt
-    import xarray as xr
-
-    #
-    # # vels=('LCEWAP01', 'LCNSAP01', 'LRZAAP01', 'LERRAP01')
-    # vels = ('u', 'v', 'w', 'e')
-    #
-    path = "/home/jeromejguay/ImlSpace/Data/Sillex2019/"
-    #filename = "D30K_001.nc"
-    filename = "D60K_000.nc"
-    #
-    ds = xr.open_dataset(path + filename)
-
 

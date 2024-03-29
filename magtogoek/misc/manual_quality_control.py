@@ -1,5 +1,6 @@
 """
 Tools that allow for manually flagging data with a manual plot.
+Made to be used from the app.py.
 
 Interactive Plot Commands
 -------------------------

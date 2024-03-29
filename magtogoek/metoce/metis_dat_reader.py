@@ -312,7 +312,7 @@ def _degree_minute_to_degree_decimal(value: str) -> float:
 
     Returns
     -------
-       Value in degree deciaml
+       Value in degree decimal
     """
     m = re.match("(\d+)°(\d+.\d+)'(\S+)", value)
     if m is not None:

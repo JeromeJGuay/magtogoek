@@ -15,46 +15,10 @@ Interactive Plot Commands
      <r>: Remove the current selection from the list of selected points.
      <[0-4]>: Append the current selection to the list of selected points and set the data flags of
               the selected points to [0-4].
-     <delete>: Append the current selection to the list of selected points and set the data value of
-              the selected points to `nan` and the corresponding data flags to 9.
      <enter>: Exit the interactive plot.
 
-Usage
-----
-
-```
-  >>>  import xarray as xr
-  >>>  import matplotlib.pyplot as plt
-
-  >>>  plt.close('all')
-
-  >>>  path = '/home/jeromejguay/ImlSpace/Data/pmza_2023/IML-4/iml4_meteoce_2023.nc'
-  >>>  save_path = '/home/jeromejguay/ImlSpace/Data/pmza_2023/IML-4/iml4_meteoce_2023_QC.nc'
-
-  >>>  # generic_var = 'atm_temperature'
-  >>>  generic_variable = 'atm_temperature'
-
-  >>>  # loading dataset
-  >>>  ds=xr.open_dataset(path)
-
-  >>>  # mapping if dataset variable names are BODC
-  >>>  gen_to_bodc_map = {ds[v].attrs['generic_name']: v for v in ds.variables}
-  >>>  bodc_var = gen_to_bodc_map[generic_variable]
-
-  >>>  # Plotting the data.
-  >>>  iqcp = QcPlot(dataset=ds, variable=bodc_var)
-  >>>  iqcp.run()
-
-  >>>  # Datast needsto be loaded (not open) to overwrite the current file.
-  >>>  if path == save_path:
-  >>>      ds = ds.load()
-
-  >>>  ds.to_netcdf(save_path)
-```
-
-
-
 """
+import sys
 
 import numpy as np
 import xarray as xr
@@ -63,14 +27,15 @@ from datetime import datetime
 import matplotlib.colors as mcolors
 import matplotlib.widgets as mwidgets
 import matplotlib.backend_bases as mevent
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+
+
 
 BLUE = mcolors.to_rgba('deepskyblue')
 GREEN = mcolors.to_rgba('lime')
 ORANGE = mcolors.to_rgba('orange')
-
-# FIXME pressing delete change colors
-# add command somewhere (as legend ?)
 
 def get_qc_colormap():
     cmap = mcolors.ListedColormap([
@@ -96,7 +61,7 @@ class SelectFromCollection:
         self.fc = np.tile(self.default_fc, (self.Npts, 1))
         self.collection.set_facecolors(self.fc)
         self.collection.set_edgecolor('k')
-        self.collection.set_linewidth(.1)
+        self.collection.set_linewidth(.25)
 
         self.rect_selection = mwidgets.RectangleSelector(axe, onselect=self.onselect, useblit=True)
 
@@ -130,15 +95,16 @@ class SelectFromCollection:
 
 
     def append(self): # 'a'
-        self.selected_indices = set(list(self.selected_indices) + list(self.selection_buffer))
-        self.selection_buffer = []
+        if self.selection_buffer is not None:
+            self.selected_indices = set(list(self.selected_indices) + list(self.selection_buffer))
+            self.selection_buffer = []
 
-        # set selection colors
-        self.fc[:, :] = self.default_fc
-        self.fc[list(self.selected_indices), :-1] = GREEN[:-1]
+            # set selection colors
+            self.fc[:, :] = self.default_fc
+            self.fc[list(self.selected_indices), :-1] = GREEN[:-1]
 
-        self.collection.set_facecolors(self.fc)
-        self.canvas.draw_idle()
+            self.collection.set_facecolors(self.fc)
+            self.canvas.draw_idle()
 
     def remove(self): # 'r'
         self.selected_indices -= set(self.selection_buffer)
@@ -244,32 +210,35 @@ class QcPlot:
 
         self.pts_collection = None
 
+        self.flag_button = None
+
         self.selected_indices: set = {}
 
     def run(self):
         self.fig, self.axes = plt.subplots(2, 1, sharex=True, squeeze=True, figsize=(12, 8))  # set fig size
         self.ax0, self.ax1 = self.axes
 
+        self._plot_variable_ancillary_flag()
+        self._plot_variable_data()
 
-        self.display_qc_variable()
-        self.display_variable()
-
-        self.selector_factory()
+        self._selector_tool()
         zoom_control(self.ax0, base_scale=2)
+
+        self._add_keymap_textbox()
 
         self.fig.tight_layout()
 
         plt.show()
 
-    def display_variable(self):
+    def _plot_variable_data(self):
         self.ax0.clear()
 
-        self.display_qc_variable()
+        self._plot_variable_ancillary_flag()
 
         self.pts_collection = self.ax0.scatter(self.dataset.time, self.dataset[self.selected_variable].values, zorder=1,
+                                               edgecolors="k",
                                                alpha=.75)
-        self.ax0.get_xlim()
-        self.ax0.get_ylim()
+
         if self.gen_name is True:
             var_name = self.dataset[self.selected_variable].attrs['generic_name']
         else:
@@ -277,7 +246,15 @@ class QcPlot:
         ylabel = f"{var_name} [{self.dataset[self.selected_variable].attrs['units']}]"
         self.ax0.set_ylabel(ylabel)
 
-    def display_qc_variable(self):
+        self.ax0.scatter([], [], color='deepskyblue', edgecolors="k", linewidth=0.25, label='Unselected')
+        self.ax0.scatter([], [], color='orange', edgecolors="k", linewidth=0.25, label='Selected')
+        self.ax0.scatter([], [], color='lime', edgecolors="k", linewidth=0.25, label='In Buffer')
+        self.ax0.legend()
+
+        self.ax0.get_xlim()
+        self.ax0.get_ylim()
+
+    def _plot_variable_ancillary_flag(self):
         self.ax1.clear()
 
         self.ax1.set_ylim(-.9, 9,9)
@@ -296,11 +273,11 @@ class QcPlot:
         self.ax1.set_ylabel("qc flag")
         self.ax1.legend()
 
-    def flag_data(self, indices: list, flag_value: int):
+    def _flag_data(self, indices: list, flag_value: int):
         _date = datetime.now().strftime("%Y-%m-%d")
         self.dataset[self.selected_qc_variable][indices] = flag_value
         self.dataset[self.selected_qc_variable].attrs['quality_date'] = _date
-        if "Manual flagging" not in self.dataset[self.selected_qc_variable].attrs['quality_test']:
+        if "manual flagging" not in self.dataset[self.selected_qc_variable].attrs['quality_test']:
             self.dataset[self.selected_qc_variable].attrs['quality_test'] += "Manual flagging." + "\n"
 
         if f"{self.selected_variable} manual flagging" not in self.dataset.attrs["quality_comments"]:
@@ -308,46 +285,43 @@ class QcPlot:
 
         self.dataset['date_modified'] = _date
 
-    def delete_data(self, indices: list):
-        self.dataset[self.selected_variable][indices] = np.nan
-        self.flag_data(indices, 9)
-
-
-    def selector_factory(self):
+    def _selector_tool(self):
         selector = SelectFromCollection(self.ax0, self.pts_collection)
 
         def point_selection_event(event):
-            _xlim = self.ax0.get_xlim()
-            if event.key == "enter":
-                selector.disconnect()
-                #self.fig.canvas.draw()
-                plt.close()
+                _xlim = self.ax0.get_xlim()
+                if event.key == "enter":
+                    selector.disconnect()
+                    plt.close()
 
-            elif event.key == "delete":
-                selector.append()
-                self.delete_data(list(selector.selected_indices))
-                selector.reset()
-                self.display_variable()
-                selector.collection = self.pts_collection
-
-            elif event.key == "a":
-                selector.append()
-
-            elif event.key == "r":
-                selector.remove()
-
-            for i in range(5):
-                if event.key == str(i):
+                elif event.key == "a":
                     selector.append()
-                    self.flag_data(list(selector.selected_indices), i)
-                    selector.reset()
-                    self.display_qc_variable()
-                    break
 
-            self.ax0.set_xlim(_xlim)
+                elif event.key == "r":
+                    selector.remove()
+
+                for i in range(5):
+                    if event.key == str(i):
+                        selector.append()
+                        self._flag_data(list(selector.selected_indices), i)
+                        selector.reset()
+                        self._plot_variable_ancillary_flag()
+                        break
+
+                self.ax0.set_xlim(_xlim)
 
         self.fig.canvas.mpl_connect("key_press_event", point_selection_event)
 
+    def _add_keymap_textbox(self):
+        # + Zoom with the scroll wheel.
+        # + Select points with left drag-click.
+        _text = (" [a/r]: append/remove points from buffer"
+                 " [0-4]: Set flag values."
+                 " [Enter]: Close and save.")
+
+        #anchored_text = AnchoredText(_text, loc=2)
+        #self.ax0.add_artist(anchored_text)
+        self.ax0.set_title(_text)
 
 
 def manuel_qc_plots(filename: str, variable: str, save_path=None) -> None:
@@ -355,16 +329,24 @@ def manuel_qc_plots(filename: str, variable: str, save_path=None) -> None:
     dataset = xr.load_dataset(filename)
 
     if variable not in dataset:
-
         # if the given variable is generic but the dataset in bodc
-        gen_to_bodc_map = {dataset[v].attrs['generic_name']: v for v in dataset.variables.keys()}
+        gen_to_bodc_map = {} #{dataset[v].attrs['generic_name']: v for v in dataset.variables.keys()}
+        for _v in dataset.variables.keys():
+            if "generic_name" in dataset[_v].attrs:
+                gen_to_bodc_map[dataset[_v].attrs['generic_name']] = _v
+
+        bodc_to_gen_map = {}
+        for _v in dataset.variables.keys():
+            if 'snd_parameter_urn' in dataset[_v].attrs:
+                bodc_to_gen_map[dataset[_v].attrs['snd_parameter_urn']] = _v
+
         if variable in gen_to_bodc_map:
             variable = gen_to_bodc_map[variable]
+        elif variable in bodc_to_gen_map:
+            variable = bodc_to_gen_map[variable]
         else:
-            # if the given variable is bodc but the dataset in generic
-            bodc_to_gen_map = {dataset[v].attrs['snd_parameter_urn'].split(":")[-1]: v for v in dataset.variables.keys()}
-            if variable in bodc_to_gen_map:
-                variable = bodc_to_gen_map[variable]
+            print(f"Error: `{variable}` not in dataset.")
+            sys.exit()
 
     if 'ancillary_variables' in dataset[variable].attrs and dataset[variable].attrs['ancillary_variables'] in dataset:
         if all(dataset[dataset[variable].attrs['ancillary_variables']].values == 0):
@@ -373,32 +355,8 @@ def manuel_qc_plots(filename: str, variable: str, save_path=None) -> None:
         QcPlot(dataset=dataset, variable=variable).run()
 
     if save_path is None:
-        #dataset = dataset.load()
-        #dataset.close()
-        dataset.to_netcdf(filename)
-    else:
-        dataset.to_netcdf(save_path)
+        _path=Path(filename)
+        save_path = _path.with_name(f'{_path.stem}_manual_QC.nc')
 
-
-
-if __name__ == '__main__':
-    plt.close('all')
-
-    path = '/home/jeromejguay/ImlSpace/Data/pmza_2023/IML-4/iml4_meteoce_2023.nc'
-    save_path = '/home/jeromejguay/ImlSpace/Data/pmza_2023/IML-4/iml4_meteoce_2023_QC.nc'
-
-    # generic_var = 'atm_temperature'
-    generic_variable = 'ph'
-
-    # loading dataset
-    ds=xr.open_dataset(path)
-
-    # mapping if dataset variable names are BODC
-    gen_to_bodc_map = {ds[v].attrs['generic_name']: v for v in ds.variables}
-    bodc_var = gen_to_bodc_map[generic_variable]
-
-    # Plotting the data.
-    plt.ioff()
-    for var in ds.variables:
-        if "_QC" not in var and 'ancillary_variables' in ds[var].attrs:
-            QcPlot(dataset=ds, variable=var).run()
+    dataset.to_netcdf(save_path)
+    print(f"Dataset saved -> `{save_path}`.")

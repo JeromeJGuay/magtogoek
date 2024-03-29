@@ -181,10 +181,20 @@ def plot(info):
 @click.argument("variable", metavar="[variable]", type=click.STRING, default=None, required=True)
 @click.argument("save_path", metavar="[save_path]", nargs=1, type=click.Path(dir_okay=True), required=False)
 def flag_data(ctx, info, input_file, variable, save_path):
-    """Command to flag data."""
+    """Command to manually flag data.
+
+    [variable] BODC or generic variable name.
+
+    [save_path] If not provided, a new file is made with a `_manual_QC` added to the file name.
+
+
+    """
     # fixme add QC comments options ?
     from magtogoek.misc.manual_quality_control import manuel_qc_plots
+
     manuel_qc_plots(filename=input_file, variable=variable, save_path=save_path)
+
+
 
 # --------------------------- #
 #       config command        #

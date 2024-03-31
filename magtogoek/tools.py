@@ -20,27 +20,6 @@ def nans(shape: tp.Union[list, tuple, np.ndarray]) -> np.ndarray:
     return np.full(shape, np.nan)
 
 
-# def flag_data(dataset: xr.Dataset, var: str, flag_thres: int = 2, ancillary_variables: str = None) -> xr.DataArray:
-#     """
-#     Set value to nan where the flag value is greater thant the flag_thres,
-#
-#     Parameters
-#     ----------
-#     dataset :
-#         The variable `var` must be in the dataset along with `var+'_QC'`.
-#     var :
-#     ancillary_variables :
-#     flag_thres :
-#
-#     Returns
-#     -------
-#     data with nan values where the flags were greater than the flag_thres.
-#     """
-#     if ancillary_variables is None:
-#         ancillary_variables = dataset[var].attrs["ancillary_variables"]
-#
-#     return dataset[var].where(dataset[ancillary_variables].data <= flag_thres)
-
 def get_flagged_data(dataset: xr.Dataset, var: str, flag_value: int, ancillary_variables: str = None) -> xr.DataArray:
     """
     Set value to nan where the flags are not equal to the `flag_value`.

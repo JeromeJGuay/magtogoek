@@ -263,39 +263,3 @@ def add_flags_values(flag_variable: np.ndarray, new_flags: np.ndarray):
 def merge_flags(flags_arrays: List[np.ndarray]) -> np.ndarray:
     """Merge flags_arrays keeping the greatest values"""
     return np.stack(flags_arrays, axis=-1).max(axis=-1)
-
-
-if __name__ == "__main__":
-    import xarray as xr
-
-    # CLIMATOLOGY COMPARISON TEST #
-    path = '/home/jeromejguay/WorkSpace/Data/Sillex2018/Raw/FreshWater/'
-    # data_path = path + 'discharge1944_2019.nc'
-    # clim_path = path + 'discharge1994_2019_clim.nc'
-
-    data_2d_path = path + 'test_2d_data.nc'
-    clim_2d_path = path + 'test_2d_clim.nc'
-
-    ds = xr.open_dataset(data_2d_path)
-    clim_ds = xr.open_dataset(clim_2d_path)
-
-    _variable = 'discharge'
-    _threshold = 1
-
-    climatology_outlier_test(
-        dataset=ds,
-        climatology_dataset=clim_ds,
-        variable=_variable,
-        threshold=_threshold,
-        depth_interpolation_method='linear'
-    )
-
-    outlier = find_climatology_outlier(
-        dataset=ds,
-        climatology_dataset=clim_ds,
-        variable=_variable,
-        threshold=_threshold,
-        depth_interpolation_method='linear'
-    )
-    outlier.plot()
-

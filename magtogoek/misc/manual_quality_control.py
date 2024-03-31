@@ -203,6 +203,7 @@ class QcPlot:
         self.dataset = dataset
         self.selected_variable = variable
         self.gen_name = gen_name
+        self.save_dataset = False
 
         self.selected_qc_variable = self.dataset[self.selected_variable].attrs["ancillary_variables"]
 
@@ -292,6 +293,7 @@ class QcPlot:
         def point_selection_event(event):
                 _xlim = self.ax0.get_xlim()
                 if event.key == "enter":
+                    self.save_dataset = True
                     selector.disconnect()
                     plt.close()
 
@@ -300,6 +302,10 @@ class QcPlot:
 
                 elif event.key == "r":
                     selector.remove()
+                elif event.key == "escape":
+                    selector.disconnect()
+                    plt.close()
+
 
                 for i in range(5):
                     if event.key == str(i):
@@ -318,7 +324,8 @@ class QcPlot:
         # + Select points with left drag-click.
         _text = (" [a/r]: append/remove points from buffer"
                  " [0-4]: Set flag values."
-                 " [Enter]: Close and save.")
+                 " [Enter]: Close and save."
+                 " [Escape]: Cancel.")
 
         #anchored_text = AnchoredText(_text, loc=2)
         #self.ax0.add_artist(anchored_text)
@@ -350,14 +357,15 @@ def manuel_qc_plots(filename: str, variable: str, save_path=None) -> None:
             sys.exit()
 
     if 'ancillary_variables' in dataset[variable].attrs and dataset[variable].attrs['ancillary_variables'] in dataset:
-        if all(dataset[dataset[variable].attrs['ancillary_variables']].values == 0):
-            # check if variable is 1D
-            dataset[dataset[variable].attrs['ancillary_variables']].values[:] = 1
-        QcPlot(dataset=dataset, variable=variable).run()
+        qc_plot = QcPlot(dataset=dataset, variable=variable)
+        qc_plot.run()
 
-    if save_path is None:
-        _path=Path(filename)
-        save_path = _path.with_name(f'{_path.stem}_manual_QC.nc')
+        if qc_plot.save_dataset is True:
+            if save_path is None:
+                _path=Path(filename)
+                save_path = _path.with_name(f'{_path.stem}_manual_QC.nc')
 
-    dataset.to_netcdf(save_path)
-    print(f"Dataset saved -> `{save_path}`.")
+            dataset.to_netcdf(save_path)
+            print(f"Dataset saved -> `{save_path}`.")
+        else:
+            print("Manual flagging cancelled.")

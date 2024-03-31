@@ -177,20 +177,28 @@ def plot(info):
 @_magtogoek.command("flagdata", context_settings=CONTEXT_SETTINGS)
 @add_options(common_options)
 @click.pass_context
-@click.argument("input_file", metavar="[input_files]", nargs=1, type=click.Path(exists=True), required=True)
+@click.argument("input_file", metavar="[input_file]", nargs=1, type=click.Path(exists=True), required=True)
 @click.argument("variable", metavar="[variable]", type=click.STRING, default=None, required=True)
 @click.argument("save_path", metavar="[save_path]", nargs=1, type=click.Path(dir_okay=True), required=False)
 def flag_data(ctx, info, input_file, variable, save_path):
-    """Command to manually flag data.
+    """Command to manually flag data in netcdf file.
 
-    [variable] BODC or generic variable name.
-
-    [save_path] If not provided, a new file is made with a `_manual_QC` added to the file name.
-
-
+    \b
+    Arguments:
+        [input_file] path/to/netcdf_file.
+        [variable] bodc or generic variable name. The variable must have an ancillary variable (variable_QC).
+        [save_path] (default=None) If not provided, a new file is made with a `_manual_QC` added to the file name.
     """
-    # fixme add QC comments options ?
+
     from magtogoek.misc.manual_quality_control import manuel_qc_plots
+    click.secho('Plot commands:')
+    click.echo('\tIn the variable (upper) subplot the ' + click.style("click", fg="red", bold=True) + ' and ' + click.style("drag", fg="red", bold=True) + ' to select data.')
+    click.echo('\tPress ' + click.style("a", fg="red", bold=True) + ' to append selected data to buffer.')
+    click.echo('\tPress  ' + click.style("r", fg="red", bold=True) + ' to remove selected data from buffer.')
+    click.echo('\tPress  ' + click.style("[0-4]", fg="red", bold=True) + ' to set the flag value of the data in the current selection and in the buffer.')
+    click.echo('\tPress  ' + click.style("Enter", fg="red", bold=True) + ' to save and exit.')
+    click.echo('\tPress  ' + click.style("Escape", fg="red", bold=True) + ' to cancel.')
+    click.echo('\t'+ click.style("Scroll", fg="red", bold=True) + ' to zoom in an out.')
 
     manuel_qc_plots(filename=input_file, variable=variable, save_path=save_path)
 

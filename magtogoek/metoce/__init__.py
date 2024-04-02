@@ -59,7 +59,7 @@ GENERIC_PARAMETERS = [
     'lon',
     'lat',
     'heading',
-    'roll_',
+    'roll',
     'pitch',
     'roll_std',
     'pitch_std',
@@ -70,7 +70,7 @@ GENERIC_PARAMETERS = [
 FIGURES_VARIABLES = {
     'gsp_position': ['lon', 'lat'],
     'gps_motion': ['speed', 'course', 'u_ship', 'v_ship'],
-    'compass': ['heading', 'roll_', 'pitch', 'roll_std', 'pitch_std'],
+    'compass': ['heading', 'roll', 'pitch', 'roll_std', 'pitch_std'],
     'velocity': ['u', 'v', 'w'],
     'wind': ["wind_speed", "wind_direction", "wind_gust"],
     'meteo': ['atm_temperature', 'atm_humidity', 'atm_pressure'],

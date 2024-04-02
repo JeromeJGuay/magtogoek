@@ -404,9 +404,9 @@ def roll_test(dataset: xr.Dataset, threshold: float) -> tp.Type[np.array]:
     """
     Roll conditions (True fails)
     Distance from mean"""
-    if "roll_" in dataset:
-        roll_mean = circmean(dataset.roll_.values, low=-180, high=180, nan_policy='omit')
-        roll_from_mean = circular_distance(dataset.roll_.values, roll_mean, units="deg")
+    if "roll" in dataset:
+        roll_mean = circmean(dataset['roll'].values, low=-180, high=180, nan_policy='omit')
+        roll_from_mean = circular_distance(dataset['roll'].values, roll_mean, units="deg")
         return roll_from_mean > threshold
     else:
         l.warning("Roll test aborted. Missing roll data")

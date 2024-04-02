@@ -143,7 +143,7 @@ def _load_viking_metoce_data(viking_data: VikingData) -> Tuple[Dict[str, Tuple[n
         data.update(
             {'heading': (viking_data.comp['heading'], {}),
              'pitch': (viking_data.comp['pitch'], {}),
-             'roll_': (viking_data.comp['roll'], {}),
+             'roll': (viking_data.comp['roll'], {}),
              'pitch_std': (viking_data.comp['pitch_std'], {}),
              'roll_std': (viking_data.comp['roll_std'], {})}
         )
@@ -326,7 +326,7 @@ def _load_metis_metoce_data(metis_data: MetisData) -> Tuple[Dict[str, Tuple[np.m
         'magnetic_declination': (metis_data.init['magnetic_declination'], {}),
         'heading': (metis_data.init['heading'], {'corrections': 'Corrected for magnetic declination at sampling.\n'}),
         'pitch': (metis_data.init['pitch'], {}),
-        'roll_': (metis_data.init['roll'], {}),
+        'roll': (metis_data.init['roll'], {}),
         'pitch_std': (metis_data.init['pitch_std'], {}),
         'roll_std': (metis_data.init['roll_std'], {})
         }

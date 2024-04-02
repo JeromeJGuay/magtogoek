@@ -401,7 +401,7 @@ def load_adcp_binary(
         if (data.roll == 0).all() or (np.diff(data.roll) == 0).all():
             l.warning("Roll data are either all 0, or not varying.")
         else:
-            dataset["roll_"] = (["time"], np.asarray(data.roll))
+            dataset["roll"] = (["time"], np.asarray(data.roll))
     if "pitch" in data:
         if (data.pitch == 0).all() or (np.diff(data.pitch) == 0).all():
             l.warning("Pitch data are either all 0, or not varying.")

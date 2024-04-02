@@ -15,7 +15,7 @@ from magtogoek.utils import json2dict
 
 BEAM_PARAMETERS = ("time", "depth", "v1", "v2", "v3", "v4")
 VEL_PARAMETERS = ("time", "depth", "u", "v", "w", "e")
-ANC_PARAMETERS = ('time', 'pitch', 'roll_', 'heading', 'pres', 'temperature', 'lon', 'lat')
+ANC_PARAMETERS = ('time', 'pitch', 'roll', 'heading', 'pres', 'temperature', 'lon', 'lat')
 QC_PARAMETERS = ('u', 'v', 'w', 'pres', 'temperature')
 
 PARAMETERS_METADATA_PATH = CONFIGURATION_PATH.joinpath("odf_parameters_metadata.json")

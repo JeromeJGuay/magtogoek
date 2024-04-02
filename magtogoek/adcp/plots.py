@@ -28,7 +28,7 @@ BINARY_CMAP = plt.get_cmap("viridis_r", 2)
 VEL_CMAP = cmo.cm.balance
 plt.style.use("seaborn-dark-palette")
 
-GEO_VAR = ["heading", "roll_", "pitch", "lon", "lat"]
+GEO_VAR = ["heading", "roll", "pitch", "lon", "lat"]
 ANC_VAR = ["xducer_depth", "temperature", "pres"]
 
 

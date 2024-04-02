@@ -40,7 +40,7 @@ GENERIC_PARAMETERS = [
     'lon',
     'lat',
     'heading',
-    'roll_',
+    'roll',
     'pitch',
     'u_ship',
     'v_ship',

@@ -129,7 +129,7 @@ P01_CODES_MAP = {
     'lon': "ALONZZ01",
     'lat': "ALATZZ01",
     'heading': "HEADCM01",
-    'roll_': "ROLLGP01",
+    'roll': "ROLLGP01",
     'pitch': "PTCHGP01",
     'roll_std': "ROLLSD01",
     'pitch_std': "PTCHSD01",
@@ -527,7 +527,7 @@ def _adcp_quality_control(dataset: xr.Dataset, pconfig: ProcessConfig):
 
     adcp_dataset = adcp_dataset.expand_dims(dim={'depth': [0]})
 
-    for var in set(dataset.variables) & {'roll_', 'pitch'}:
+    for var in set(dataset.variables) & {'roll', 'pitch'}:
         adcp_dataset[var] = dataset[var]
 
     adcp_dataset.attrs['coord_system'] = "earth"

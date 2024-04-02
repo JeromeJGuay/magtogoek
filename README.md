@@ -114,7 +114,7 @@ Once filled out, configuration files have to be passed to the `process` command:
     $ mtgk process [config_file]
 ```
 ### Configuration guide
-A guide for the configurations file entries is available [here](config_user_guide.md)
+A guide for the configurations file entries is available [here](docs/config_user_guide.md)
 
 ### Metadata storage: platform files
 Magtogoek uses `json` files to store sensor (instruments) and platform metadata which are referred to as `platform_files`.

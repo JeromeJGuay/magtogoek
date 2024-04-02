@@ -380,6 +380,8 @@ def _load_metis_metoce_data(metis_data: MetisData) -> Tuple[Dict[str, Tuple[np.m
             if 'nan' in _s:
                 _msg += f" (missing: {_counts['nan']}%)"
             l.warning(_msg +'.')
+        elif '5' in _counts:
+            l.warning(f"Wind data were sampled by the wxt536 sensor.")
 
         data.update(
             {

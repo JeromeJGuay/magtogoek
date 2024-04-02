@@ -1,0 +1,18 @@
+#+title: Change from main.
+
+* Configurations
+** Leading_Trim and Trailing_Trim.
+Leading and trailing trim are now replace by 2 sets of parameters: start_time/end_time and start_trim/end_trim.
+The data are first cut with start/end trim if both are provided.
+Version 0 config file can still use the leading and trailing trim parameters.
+
+* Processing
+Netcdf file are saved after the raw data has been loaded.
+These files have the same name has the default_output_path but with the suffix '_raw'.
+Reprocessing will use the '<default_output_path>_raw.nc' to process data unless the flag `--force-raw` is used.
+e.g. `mtgk process my_config.ini --force-raw`
+
+
+* PlatformFile
+Platform file are only used for adding attributes. No computation.
+** Lon/Lat DMS parsing.

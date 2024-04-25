@@ -1,0 +1,104 @@
+{
+    "viking_riki_2019": {
+        "platform_type": "buoy",
+        "platform_name": "IML-4",
+        "platform_model": "MTE-VIKING-BUOY",
+        "sounding": 350,
+        "longitude": -68.59,
+        "latitude": 48.67,
+        "description": null,
+        "chief_scientist": "Peter Galbraith",
+        "buoy_specs": {
+            "type": "MTE",
+            "model": "Viking",
+            "height": "4.5 m",
+            "diameter": "2.1 m",
+            "weight": "1000 kg",
+            "description": "bouée noire (partie immergée) avec jaune."
+        },
+        "instruments": {
+			"CTD_01": {
+                "sensor_height": null,
+                "sensor_depth": 0.5,
+                "serial_number": "15264",
+                "manufacturer": "Seabird Electroics Inc.",
+                "model": "SBE-37SI",
+                "firmware_version": "CTD_firmware_version",
+                "chief_scientist": "Peter Galbraith",
+                "description": "mesure temperature et conductivite de l'eau.",
+                "comments": "CTD COMMENTS TEST",
+                "sensors": {
+                    "TEMPERATURE_01": {
+                        "name": "temperature",
+                        "code": "TE90_01",
+                        "description": "temperature ITS90",
+                        "comments": null,
+                        "calibration": {
+                            "date": null,
+                            "number_of_coefficients": 4,
+                            "coefficients": "a0=-1.933332e-04, a1=3.129761e-04, a2=-4.41274e-06, a3=2.019632e-07",
+                            "calibration_equation": "t = 1/(a0 + ln(n) * (a1 + ln(n)*a2 + ln(n)*ln(n)*a3)) \u0096 273.15",
+                            "calibration_units": "degrés Celsius (ITS90)",
+                            "archiving_units": "degrés Celsius (ITS90)",
+                            "conversion_factor": 1,
+                            "comments": "t est la temperature  ITS90."
+                        }
+                    },
+                    "CONDUCTIVITE_01": {
+                        "name": "conductivite",
+                        "code": "CNDC",
+                        "description": null,
+                        "comments": "résolution de 0.0001 mmho/cm et précision de 0.003 mmho/cm.",
+                        "calibration": {
+                            "date": null,
+                            "number_of_coefficients": 7,
+                            "coefficients": "CPcor=-9.57E-08, CTcor=3.25E-06, WBOTC=2.578E-05",
+                            "calibration_equation": null,
+                            "calibration_units": "S/m",
+                            "archiving_units": "mhos/m",
+                            "conversion_factor": 1,
+                            "comments": ""
+                        }
+                    }
+
+				}
+            },
+            "ANEMOMETRE_01": {"sensor_height": 2, "model":  "WMT700", "sensor": {"VITESSE_01": {}, "DIRECTION_01": {}}},
+            "ATMOSPHERE_01": {"model": "WXT520/536", "sensor": {"TEMPERATURE_01": {}, "HUMIDITE_01": {}, "PRESSION": {}}},
+            "POMPE_01": {"model": "SBE-5T"},
+            "PH_01": {"model": "SeaFet", "sensor": {"PH_01": {} }},
+            "FLUORIMETRE_01": {"model": "ECO Triplet-w", "sensor": {"FLUORESCENCE_01": {}}},
+            "PCO2_01": {"model": "CO2-Pro Atmosphere"},
+            "CAPTEUR_VAGUES_01": {"model": "SVS-603"},
+            "adcp_01": {
+                "sensor_height": null,
+                "sensor_depth": 1,
+                "serial_number": "adcp_serial",
+                "manufacturer": "Teledyne",
+                "model": "wh",
+                "firmware_version": "adcp_firmware_version",
+                "chief_scientist": "Peter Galbraith",
+                "description": null,
+                "comments": null,
+                "sensors": {
+                    "TEMPERATURE_01": {
+                        "name": null,
+                        "code": "TE90_01",
+                        "description": null,
+                        "comments": null,
+                        "calibration": {
+                            "date": null,
+                            "number_of_coefficients": null,
+                            "coefficients": null,
+                            "calibration_equation": null,
+                            "calibration_units": "degrés Celsius",
+                            "archiving_units": "degrés Celsius",
+                            "conversion_factor": null,
+                            "comments": null
+                        }
+                    }
+                }
+			}
+        }
+    }
+}

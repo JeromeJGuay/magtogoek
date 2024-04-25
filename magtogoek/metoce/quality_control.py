@@ -215,7 +215,7 @@ def _propagate_flag(dataset: xr.Dataset, pconfig: "ProcessConfig"):
 
     Propagation Rules
     -----------------
-        + Depth, Temperature, Salinity -> Density
+        + Temperature, Salinity -> Density
         + Pressure, Temperature, Salinity -> Dissolved Oxygen
         + Temperature, Salinity -> pH
         + Atmospheric Pressure -> pco2 air
@@ -223,8 +223,11 @@ def _propagate_flag(dataset: xr.Dataset, pconfig: "ProcessConfig"):
 
     Notes
     -----
-        Flag propagation (using the highest values) works since flags values of 5 to 8 are
+        + Flag propagation (using the highest values) works since flags values of 5 to 8 are
         not used in the quality control.
+        + Data with flag values of 0 (no quality control) can only be changed to 3 (probably_bad), 4 (bad).
+        + Missig value flag (9) won't propagate.
+
 
     """
 
@@ -246,8 +249,11 @@ def _propagate_flag(dataset: xr.Dataset, pconfig: "ProcessConfig"):
         qc_dataarray_list = [dataset[_var].data for _var in set(flag_propagation_rules[variable]) & set(dataset.variables)]
         new_qc_values = merge_flags(flags_arrays=qc_dataarray_list)
 
-        # 0 (no QC) flag value should only be changed to flag value 3 (probably bad) or more (4, 9).
+        # 0 (no QC) flag value should only be changed to flag value 3 (probably bad) or 4 (bad).
         new_qc_values[(new_qc_values <= 2) & (dataset[variable].values == 0)] = 0
+
+        # flag of 9 (missing) should not propagate since they should already be flagged as such.
+        new_qc_values[new_qc_values == 9] = dataset[variable].values[new_qc_values == 9]
 
         dataset[variable].data = new_qc_values
 

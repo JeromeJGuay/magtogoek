@@ -82,8 +82,14 @@ def apply_magnetic_correction(dataset: xr.Dataset, pconfig: "ProcessConfig"):
 
 def apply_sensors_corrections(dataset: xr.Dataset, pconfig: "ProcessConfig"):
     """
-    TODO Explains algorithms
+    The order here is important.
 
+    - `raw_dissolved_oxygen` needs to be computed first using the raw `temperature` values.
+    - Then the corrections needs to be applied to the `temperature` before computing the dissolved_oxygen
+      with the Rinko-Winkler coefficients.
+    - Then were apply the corrections for the `salinity` before doing the `dissolved_oxygen` `salinity` and
+      pressure(`pres`) compensation correction.
+    - Then we
     """
     if "dissolved_oxygen" in dataset and pconfig.dissolved_oxygen_winkler_correction is True:
             compute_rinko_raw_data_from_dissolved_oxygen(dataset=dataset, pconfig=pconfig)
@@ -154,7 +160,7 @@ def _wind_motion_correction(dataset:xr.Dataset):
 
             for v in ("wind_speed", "wind_direction"):
                 add_correction_attributes_to_dataarray(dataset[v])
-                dataset[v].attrs["correction"] = _msg + "\n"
+                dataset[v].attrs["corrections"] += _msg + "\n"
 
         if all(v in dataset for v in ("wind_gust", "wind_gust_direction")):
             gust_x, gust_y = north_polar2cartesian(dataset.wind_gust, dataset.wind_gust_direction - 180)
@@ -164,7 +170,7 @@ def _wind_motion_correction(dataset:xr.Dataset):
             dataset.wind_gust_direction.values = (dataset.wind_gust_direction.values + 180) % 360
             for v in ("wind_gust", "wind_gust_direction"):
                 add_correction_attributes_to_dataarray(dataset[v])
-                dataset[v].attrs["correction"] = _msg + "\n"
+                dataset[v].attrs["corrections"] += _msg + "\n"
 
 
 def _adcp_motion_correction(dataset: xr.Dataset):

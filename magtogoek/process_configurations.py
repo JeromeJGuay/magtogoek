@@ -223,7 +223,6 @@ def get_config_taskparser(process: Optional[str] = None, version: Optional[int] 
     section = "HEADER"
     tparser.add_option(section, "version", dtypes=["int"], default=version)
     tparser.add_option(section, "made_by", dtypes=["str"], default=getpass.getuser())
-    tparser.add_option(section, "last_updated", dtypes=["str"], default=datetime.now().strftime("%Y-%m-%d"))
 
     if version == 0:
         tparser.add_option(section, "sensor_type", dtypes=["str"], default=process, is_required=True, choice=PROCESSES, comments=f'One of {PROCESSES}.')

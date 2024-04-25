@@ -5,12 +5,9 @@
 The header section is auto generated. 
 ```dosini
 [HEADER]
+version                       = Auto generated.
 made_by                       = Auto generated.
-last_updated                  = Auto generated.
-sensor_type                   = Auto generated. Field use by the `process` command. Do not change.
-platform_type                 = One of [`buoy`, `mooring`, `ship`] 
-                                Only used if no `platform_file` is given. Use for proper BODC variables.
-                                   
+process                       = Auto generated. Field use by the `process` command. Do not change.                                   
 ```
 # Input and output path.
 In the `input` and `output` sections, empty fields are considered False.

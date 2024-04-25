@@ -24,7 +24,7 @@ def coordsystem2earth(dataset: xr.Dataset) -> xr.Dataset:
             Velocities: ('v1','v2','v3','v4') or ('u', 'v', 'w', 'e').
             'heading'
             'pitch'
-            'roll_'
+            'roll'
         Required Attributes:
             'beam_angle': int
             'beam_pattern': 'convex' or 'concave'
@@ -51,10 +51,10 @@ def coordsystem2earth(dataset: xr.Dataset) -> xr.Dataset:
         dataset = percent_good_beam2xyz(dataset=dataset)
 
     if dataset.attrs['coord_system'] == 'xyz':
-        if 'heading' in dataset and 'roll_' in dataset and 'pitch' in dataset:
+        if 'heading' in dataset and 'roll' in dataset and 'pitch' in dataset:
             if any([
                 (dataset['heading'].values == 0).all(),
-                (dataset['roll_'].values == 0).all(),
+                (dataset['roll'].values == 0).all(),
                 (dataset['pitch'].values == 0).all()
             ]):
                 l.warning(
@@ -175,7 +175,7 @@ def xyz2enu(dataset: xr.Dataset):
             'u', 'v', 'w', 'e'
             'heading'
             'pitch'
-            'roll_'
+            'roll'
         Required Attributes:
             `orientation`: 'up' or 'down
     """
@@ -184,7 +184,7 @@ def xyz2enu(dataset: xr.Dataset):
 
     enu = transform.rdi_xyz_enu(
         np.stack([dataset[v].T for v in velocities], axis=2),
-        dataset['heading'], dataset['pitch'], dataset['roll_'],
+        dataset['heading'], dataset['pitch'], dataset['roll'],
         orientation=dataset.attrs['orientation'],
     )
     for i, v in enumerate(velocities):
@@ -194,7 +194,7 @@ def xyz2enu(dataset: xr.Dataset):
     if all(v in dataset for v in bt_velocities):
         bt_enu = transform.rdi_xyz_enu(
             np.stack([dataset[v].T for v in bt_velocities], axis=1),
-            dataset['heading'], dataset['pitch'], dataset['roll_'],
+            dataset['heading'], dataset['pitch'], dataset['roll'],
             orientation=dataset.attrs['orientation'],
         )
         for i, v in enumerate(bt_velocities):

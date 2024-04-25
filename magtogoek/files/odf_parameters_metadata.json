@@ -77,7 +77,7 @@
         "print_field_width": 6,
         "print_decimal_places": 1
     },
-    "roll_": {
+    "roll": {
         "code": "ROLL_01",
         "name": "Roll Angle",
         "units": "degrees",

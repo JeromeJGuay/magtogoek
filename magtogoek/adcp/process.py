@@ -180,7 +180,7 @@ P01_CODES_MAP = {
     'lon': "ALONZZ01",
     'lat': "ALATZZ01",
     'heading': "HEADCM01",
-    'roll_': "ROLLGP01",
+    'roll': "ROLLGP01",
     'pitch': "PTCHGP01",
     'u_ship': "APEWZZ01",
     'v_ship': "APNSZZ01",

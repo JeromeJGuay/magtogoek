@@ -548,7 +548,7 @@ def add_navigation(dataset: xr.Dataset, navigation_files: str):
     Use to load:
         `lon, `lat`,
         `u_shp`, `v_ship`
-        `roll_`, `pitch`, `heading`
+        `roll`, `pitch`, `heading`
 
     Parameters
     ----------
@@ -583,10 +583,10 @@ def add_navigation(dataset: xr.Dataset, navigation_files: str):
                 dataset['v_ship'] = nav_ds['v_ship']
                 l.log("Platform velocity data (u_ship, v_ship) loaded.")
 
-            if all([var in nav_ds for var in ('heading', 'pitch', 'roll_')]):
+            if all([var in nav_ds for var in ('heading', 'pitch', 'roll')]):
                 dataset['heading'] = nav_ds['heading']
                 dataset['pitch'] = nav_ds['pitch']
-                dataset['roll_'] = nav_ds['roll_']
+                dataset['roll'] = nav_ds['roll']
                 l.log("Platform inertial data (heading, pitch, roll) loaded.")
             nav_ds.close()
         else:

@@ -29,26 +29,25 @@ from magtogoek.utils import get_files_from_expression
 
 FILE_FORMATS = (".log", ".gpx", ".nc")
 
-#NAVIGATION_VARIABLES_NAME = ("lon", "lat", "time", 'u_ship', 'v_ship', 'heading', 'roll_', 'pitch')
+#NAVIGATION_VARIABLES_NAME = ("lon", "lat", "time", 'u_ship', 'v_ship', 'heading', 'roll', 'pitch')
 
-VARIABLE_NAME_MAPPING = dict(
-    time=("Time", "TIME", "T", "t"),
-    lon=("LON", "Lon", "longitude", "LONGITUDE", "Longitude", "X", "x"),
-    lat=("LAT", "Lat", "latitude", "LATITUDE", "Latitude", "Y", "y"),
-    u_ship=(),
-    v_ship=(),
-    heading=(),
-    roll_=(),
-    pitch=()
-
-)
+VARIABLE_NAME_MAPPING = {
+    'time': ("Time", "TIME", "T", "t"),
+    'lon': ("LON", "Lon", "longitude", "LONGITUDE", "Longitude", "X", "x"),
+    'lat': ("LAT", "Lat", "latitude", "LATITUDE", "Latitude", "Y", "y"),
+    'u_ship': (),
+    'v_ship': (),
+    'heading': (),
+    'roll': (),
+    'pitch':()
+}
 
 
 def load_navigation(filenames):
     """Load gps data from  `nmea`, `gpx` or `netcdf` file format.
 
     For netcdf files, additional data can also be loaded:
-        "heading", "pitch" and "roll_". FIXME NOT TESTED
+        "heading", "pitch" and "roll". FIXME NOT TESTED
 
     Returns a xarray.Dataset with the loaded data.
     """

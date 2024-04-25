@@ -1,23 +1,6 @@
 """
-*** NOTE NOT UP TO DATE ***
 author: JérômeJGuay
-date: March 4, 2021
-
-This make_configparser is called by magtogoek_command.py
-    $ mtgk config ...
-
-ADCP PROCESSING:
--yearbase: year that the sampling started. ex: `1970`
--adcp_orientation: `down` or `up`. (horizontal no supported)
--sonar:  Must be one of `wh`, `os`, `bb`, `nb` or `sw`
-
-ADCP_QUALITY_CONTROL:
-If quality_control is `False`, no quality control is carried out.
-Blanks are omitted or set False.
-
-ADCP_OUTPUT:
-Set True or False.
-If bodc_name False, generic variable names are used.
+date: 2024
 
 """
 import getpass
@@ -317,7 +300,7 @@ def get_config_taskparser(process: Optional[str] = None, version: Optional[int] 
         if version == 0:
             tparser.add_option(section, "sensor_id", dtypes=["str"], default=None) # convert to adcp_id ?
         else:
-            tparser.add_option(section, "adcp_id", dtypes=["str"], default=None)  # convert to adcp_id ?
+            tparser.add_option(section, "adcp_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")  # convert to adcp_id ?
         tparser.add_option(section, "yearbase", dtypes=["int"], default="", is_required=False)
         tparser.add_option(section, "adcp_orientation", dtypes=["str"], default="down", choice=["up", "down"], comments='up or down')
         tparser.add_option(section, "sonar", dtypes=["str"], choice=["wh", "sv", "os", "sw", "sw_pd0"], comments='One of [wh, sv, os, sw, sw_pd0, ]', is_required=True)
@@ -326,14 +309,16 @@ def get_config_taskparser(process: Optional[str] = None, version: Optional[int] 
             tparser.add_option(section, "navigation_file", dtypes=["str"], default="", is_file=True)
             tparser.add_option(section, "leading_trim", dtypes=["int", "str"], value_min=0, default="", is_time_stamp=True)
             tparser.add_option(section, "trailing_trim", dtypes=["int", "str"], value_min=0, default="", is_time_stamp=True)
-        tparser.add_option(section, "sensor_depth", dtypes=["float"], default="")
-        tparser.add_option(section, "depth_range", dtypes=["float"], nargs_min=0, nargs_max=2)
-        tparser.add_option(section, "bad_pressure", dtypes=["bool"], default=False, null_value=False)
+        tparser.add_option(section, "sensor_depth", dtypes=["float"], default="", comments="Sensor depth in meter. Will overwrite the one found in the adcp file.")
+        tparser.add_option(section, "depth_range", dtypes=["float"], nargs_min=0, nargs_max=2,
+                           comments="Value in meter. Cut the bin outside this range. Either `min` or `min, max`.")
+        tparser.add_option(section, "bad_pressure", dtypes=["bool"], default=False, null_value=False,
+                           comments="If True, XducerDepth is set to 0 or to `sensor_depth` if provided.")
         tparser.add_option(section, "magnetic_declination", dtypes=["float"], default=None)
         tparser.add_option(section, "magnetic_declination_preset", dtypes=["float"], default=None, comments="Found in the ADCP configuration file. (Used for RTI)")
         tparser.add_option(section, "keep_bt", dtypes=["bool"], default=True, null_value=False)
-        tparser.add_option(section, "start_time", dtypes=["str"], default="", is_time_stamp=True)
-        tparser.add_option(section, "time_step", dtypes=["float"], default="")
+        tparser.add_option(section, "start_time", dtypes=["str"], default="", is_time_stamp=True, comments="If provided, a new time coordinate vector, starting at `start_time`, is used instead of the one found in the raw adcp file.")
+        tparser.add_option(section, "time_step", dtypes=["float"], default="", comments="Time step in seconds. Only use if a `start_time` value is provided.")
         tparser.add_option(section, "grid_depth", dtypes=["str"], default="", null_value=None,
                            comments='Path of grid txt file. Single column of bin depth (center) in meter. Can be irregularly spaced.',
                            is_path=True)
@@ -370,17 +355,17 @@ def get_config_taskparser(process: Optional[str] = None, version: Optional[int] 
         section = "METOCE_PROCESSING"
         tparser.add_option(section, "data_format", dtypes=["str"], default="viking", choice=['viking', 'metis'])
         tparser.add_option(section, "buoy_name", dtypes=["str"],  comments='Name of the buoy in the raw file.', is_required=False)
-        tparser.add_option(section, "sampling_depth", dtypes=["float"], default="Use for water sensor data corrections/computations (oxygen, density).")
-        tparser.add_option(section, "adcp_id", dtypes=["str"], default=None)
-        tparser.add_option(section, "ctd_id", dtypes=["str"], default=None)
-        tparser.add_option(section, "ctdo_id", dtypes=["str"], default=None)
-        tparser.add_option(section, "ph_id", dtypes=["str"], default=None)
-        tparser.add_option(section, "par_id", dtypes=["str"], default=None)
-        tparser.add_option(section, "eco_id", dtypes=["str"], default=None)
-        tparser.add_option(section, "pco2_id", dtypes=["str"], default=None)
-        tparser.add_option(section, "wave_id", dtypes=["str"], default=None)
-        tparser.add_option(section, "wind_id", dtypes=["str"], default=None)
-        tparser.add_option(section, "meteo_id", dtypes=["str"], default=None)
+        tparser.add_option(section, "sampling_depth", dtypes=["float"], comments="Use for water sensor data corrections/computations (oxygen, density).")
+        tparser.add_option(section, "adcp_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")
+        tparser.add_option(section, "ctd_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")
+        tparser.add_option(section, "ctdo_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")
+        tparser.add_option(section, "ph_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")
+        tparser.add_option(section, "par_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")
+        tparser.add_option(section, "eco_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")
+        tparser.add_option(section, "pco2_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")
+        tparser.add_option(section, "wave_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")
+        tparser.add_option(section, "wind_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")
+        tparser.add_option(section, "meteo_id", dtypes=["str"], default=None, comments="Needs to match instrument_id in platform files.")
 
         tparser.add_option(section, "recompute_speed_course", dtypes=["bool"], default=False, null_value=False)
         tparser.add_option(section, "compute_uv_ship", dtypes=["bool"], default=True, null_value=False)

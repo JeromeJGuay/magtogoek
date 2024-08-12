@@ -94,7 +94,7 @@ Both `mercurial` and `git` must be installed to install `Magtogoek`.
 First make sure you are in the desired python environment.
 Clone the repository from the [github repository](https://github.com/JeromeJGuay/magtogoek) and install it with `pip install`. 
 ```shell
-    $ git clone https://github.com/iml-gddaiss/magtogoek@develop_3.10
+    $ git clone -b develop_3.10 https://github.com/iml-gddaiss/magtogoek
     $ pip install -e magtogoek
 ```
 The `-e` option will not copy the project to the pip package directory. 

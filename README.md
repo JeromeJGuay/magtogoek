@@ -73,20 +73,28 @@ Use the command `conda active [env-name]` to change between anaconda environment
 ### Installing `mercurial` and `git`.
 Both `mercurial` and `git` must be installed to install `Magtogoek`. 
 
-### Install via `pip`
-First make sure you are in the desired python environment.
-```shell
-pip install git+https://github.com/iml-gddaiss/magtogoek
-```
-To update the package, run
-```shell
-pip install -U git+https://github.com/iml-gddaiss/magtogoek
-```
+[//]: # (### Install via `pip`)
+
+[//]: # (First make sure you are in the desired python environment.)
+
+[//]: # (```shell)
+
+[//]: # (pip install git+https://github.com/iml-gddaiss/magtogoek@develop_3.10)
+
+[//]: # (```)
+
+[//]: # (To update the package, run)
+
+[//]: # (```shell)
+
+[//]: # (pip install -U git+https://github.com/iml-gddaiss/magtogoek@develop_3.10)
+
+[//]: # (```)
 ### Install via `git clone`
 First make sure you are in the desired python environment.
 Clone the repository from the [github repository](https://github.com/JeromeJGuay/magtogoek) and install it with `pip install`. 
 ```shell
-    $ git clone https://github.com/iml-gddaiss/magtogoek
+    $ git clone https://github.com/iml-gddaiss/magtogoek@develop_3.10
     $ pip install -e magtogoek
 ```
 The `-e` option will not copy the project to the pip package directory. 

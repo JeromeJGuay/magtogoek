@@ -4,35 +4,70 @@
 *Name origin: Magtogoek is Algonquin for the Saint-Lawrence River and means "the path that walks".*
 
 ## Installation
-### Installing `Anaconda3`.
-If you don't have anaconda or if you are not using a python env install Anaconda3.
-Go to the [anaconda page](https://repo.anaconda.com/archive/Anaconda3-2021.05-Linux-x86_64.sh) and download the latest version for Linux.
-To install it run:
+
+TODO:
+
+Install within a directory, of your choosing, with 
 ```shell
-    $ ~/cd Download
-    $ bash Anaconda3-2021.05-Linux-x86_64.sh
+python3.10 -m venv .venv
 ```
-Note that the file name will change depending on the version.
-Once Anaconda is installed, the terminal command line should look something like:
-```shell
-    (base):$ 
-```   
-This means that the installation worked, and you are in the `base` anaconda environment.
-If `base` does not show up try this:
-```shell
-    $ cd 
-    $ source anaconda3/bin/activate
-```
-Next, create an Anaconda environment where you can use magtogoek without any dependency or version issues.
-To do so run:
-```shell
-    $ conda create -n mtgk python=3.8 numpy 
-    $ conda activate mtgk 
-```
-Now the terminal command line should look like:
-```shell
-    (mtgk):$ 
-```
+[//]: # (### Installing `Anaconda3`.)
+
+[//]: # (If you don't have anaconda or if you are not using a python env install Anaconda3.)
+
+[//]: # (Go to the [anaconda page]&#40;https://repo.anaconda.com/archive/Anaconda3-2021.05-Linux-x86_64.sh&#41; and download the latest version for Linux.)
+
+[//]: # (To install it run:)
+
+[//]: # (```shell)
+
+[//]: # (    $ ~/cd Download)
+
+[//]: # (    $ bash Anaconda3-2021.05-Linux-x86_64.sh)
+
+[//]: # (```)
+
+[//]: # (Note that the file name will change depending on the version.)
+
+[//]: # (Once Anaconda is installed, the terminal command line should look something like:)
+
+[//]: # (```shell)
+
+[//]: # (    &#40;base&#41;:$ )
+
+[//]: # (```   )
+
+[//]: # (This means that the installation worked, and you are in the `base` anaconda environment.)
+
+[//]: # (If `base` does not show up try this:)
+
+[//]: # (```shell)
+
+[//]: # (    $ cd )
+
+[//]: # (    $ source anaconda3/bin/activate)
+
+[//]: # (```)
+
+[//]: # (Next, create an Anaconda environment where you can use magtogoek without any dependency or version issues.)
+
+[//]: # (To do so run:)
+
+[//]: # (```shell)
+
+[//]: # (    $ conda create -n mtgk python=3.8 numpy )
+
+[//]: # (    $ conda activate mtgk )
+
+[//]: # (```)
+
+[//]: # (Now the terminal command line should look like:)
+
+[//]: # (```shell)
+
+[//]: # (    &#40;mtgk&#41;:$ )
+[//]: # (```)
+
 From here, any installation must be done within the `mtgk` environment.
 Use the command `conda active [env-name]` to change between anaconda environment.
 ### Installing `mercurial` and `git`.
@@ -41,17 +76,17 @@ Both `mercurial` and `git` must be installed to install `Magtogoek`.
 ### Install via `pip`
 First make sure you are in the desired python environment.
 ```shell
-pip install git+https://github.com/JeromeJGuay/magtogoek
+pip install git+https://github.com/iml-gddaiss/magtogoek
 ```
 To update the package, run
 ```shell
-pip install -U git+https://github.com/JeromeJGuay/magtogoek
+pip install -U git+https://github.com/iml-gddaiss/magtogoek
 ```
 ### Install via `git clone`
 First make sure you are in the desired python environment.
 Clone the repository from the [github repository](https://github.com/JeromeJGuay/magtogoek) and install it with `pip install`. 
 ```shell
-    $ git clone https://github.com/JeromeJGuay/magtogoek
+    $ git clone https://github.com/iml-gddaiss/magtogoek
     $ pip install -e magtogoek
 ```
 The `-e` option will not copy the project to the pip package directory. 

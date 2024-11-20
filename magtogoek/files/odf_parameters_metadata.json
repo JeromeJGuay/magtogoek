@@ -185,7 +185,7 @@
     "conductivity": {
         "code": "CNDC_01",
         "name": "Electrical Conductivity",
-        "units": "S/m",
+        "units": "mhos/m",
         "print_field_width": 10,
         "print_decimal_places": 4
     },
@@ -218,30 +218,30 @@
         "print_decimal_places": 4
     },
     "par": {
-        "code": "PSAR",
-        "name": "Photosynthetic Active Radiation",
-        "units": "umol/m**2/s",
+        "code": "SPAR_01",
+        "name": "Surface Photosynthetic Active Radiation",
+        "units": "ueinstein/m**2/s",
         "print_field_width": 10,
         "print_decimal_places": 4
     },
     "dissolved_oxygen": {
         "code": "DOXY_01",
         "name": "Dissolved Oxygen",
-        "units": "umol/L",
+        "units": "mL/L",
         "print_field_width": 10,
         "print_decimal_places": 4
     },
     "pco2_air": {
         "code": "ACO2_01",
         "name": "Partial pressure of carbon dioxide in the atmosphere",
-        "units": "utam",
+        "units": "ppm",
         "print_field_width": 10,
         "print_decimal_places": 4
     },
     "pco2_water": {
         "code": "PCO2_01",
         "name": "Partial pressure of carbone dioxide in the water body",
-        "units": "utam",
+        "units": "ppm",
         "print_field_width": 10,
         "print_decimal_places": 4
     }
